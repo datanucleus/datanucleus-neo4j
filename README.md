@@ -20,6 +20,6 @@ __Javadocs__ : [3.2](http://www.datanucleus.org/javadocs/store.neo4j/3.2/), [3.1
 
 __Download(Releases)__ : [Maven Central](http://central.maven.org/maven2/org/datanucleus/datanucleus-neo4j)
 
-__Download(Nightly)__ : [Nightly Builds](http://central.maven.org/maven2/org/datanucleus/datanucleus-neo4j)
+__Download(Nightly)__ : [Nightly Builds](http://www.datanucleus.org/downloads/maven2-nightly/org/datanucleus/datanucleus-neo4j)
 
 __Dependencies__ : See file [pom.xml](pom.xml)
