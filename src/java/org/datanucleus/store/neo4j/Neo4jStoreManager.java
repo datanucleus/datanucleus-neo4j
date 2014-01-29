@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
-import org.datanucleus.NucleusContext;
+import org.datanucleus.PersistenceNucleusContext;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.AbstractStoreManager;
@@ -58,8 +58,7 @@ public class Neo4jStoreManager extends AbstractStoreManager
      * @param nucleusContext Nucleus Context
      * @param props Properties managed by this store
      */
-    public Neo4jStoreManager(ClassLoaderResolver clr, NucleusContext nucleusContext, 
-            Map<String, Object> props)
+    public Neo4jStoreManager(ClassLoaderResolver clr, PersistenceNucleusContext nucleusContext, Map<String, Object> props)
     {
         super("neo4j", clr, nucleusContext, props);
 
