@@ -33,7 +33,6 @@ import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldPersistenceModifier;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaDataUtils;
@@ -188,83 +187,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
 
-        // Determine if this field is stored embedded
-        boolean embedded = false;
-        if (mmd.isEmbedded() || mmd.getEmbeddedMetaData() != null)
-        {
-            // Field marked directly as embedded
-            embedded = true;
-        }
-        else if (RelationType.isRelationMultiValued(relationType))
-        {
-            // Field container contents marked directly as embedded
-            if (mmd.hasCollection() && mmd.getElementMetaData() != null && mmd.getElementMetaData().getEmbeddedMetaData() != null)
-            {
-                // Embedded collection element
-                embedded = true;
-            }
-            else if (mmd.hasArray() && mmd.getElementMetaData() != null && mmd.getElementMetaData().getEmbeddedMetaData() != null)
-            {
-                // Embedded collection element
-                embedded = true;
-            }
-            else if (mmd.hasMap() && 
-                    ((mmd.getKeyMetaData() != null && mmd.getKeyMetaData().getEmbeddedMetaData() != null) || 
-                    (mmd.getValueMetaData() != null && mmd.getValueMetaData().getEmbeddedMetaData() != null)))
-            {
-                // Embedded map key/value
-                embedded = true;
-            }
-        }
-        if (!embedded && ownerMmd != null)
-        {
-            // Check for any nested embedded information (like can be specified with JDO)
-            if (RelationType.isRelationSingleValued(relationType))
-            {
-                if (ownerMmd.hasCollection())
-                {
-                    // This is a field of the element of the collection, so check for any metadata spec for it
-                    EmbeddedMetaData embmd = ownerMmd.getElementMetaData().getEmbeddedMetaData();
-                    if (embmd != null)
-                    {
-                        AbstractMemberMetaData[] embMmds = embmd.getMemberMetaData();
-                        if (embMmds != null)
-                        {
-                            for (AbstractMemberMetaData embMmd : embMmds)
-                            {
-                                if (embMmd.getName().equals(mmd.getName()))
-                                {
-                                    if (embMmd.isEmbedded() || embMmd.getEmbeddedMetaData() != null)
-                                    {
-                                        // Embedded Field is marked in nested embedded definition as embedded
-                                        embedded = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else if (ownerMmd.getEmbeddedMetaData() != null)
-                {
-                    // This is a field of an embedded persistable object, so check for any metadata spec for it
-                    AbstractMemberMetaData[] embMmds = ownerMmd.getEmbeddedMetaData().getMemberMetaData();
-                    if (embMmds != null)
-                    {
-                        for (AbstractMemberMetaData embMmd : embMmds)
-                        {
-                            if (embMmd.getName().equals(mmd.getName()))
-                            {
-                                // Embedded Field is marked in nested embedded definition as embedded
-                                embedded = true;
-                                break;
-                            }
-                        }
-                    }                    
-                }
-            }
-        }
-
+        boolean embedded = isMemberEmbedded(mmd, relationType, ownerMmd);
         if (embedded)
         {
             if (RelationType.isRelationSingleValued(relationType))
