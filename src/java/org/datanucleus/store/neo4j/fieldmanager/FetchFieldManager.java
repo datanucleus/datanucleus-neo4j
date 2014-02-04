@@ -40,7 +40,7 @@ import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.query.QueryUtils;
 import org.datanucleus.state.ObjectProvider;
-import org.datanucleus.store.fieldmanager.AbstractFieldManager;
+import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.Neo4jStoreManager;
 import org.datanucleus.store.neo4j.Neo4jUtils;
@@ -55,15 +55,9 @@ import org.neo4j.graphdb.RelationshipType;
 /**
  * Field Manager for retrieving values from Neo4j.
  */
-public class FetchFieldManager extends AbstractFieldManager
+public class FetchFieldManager extends AbstractFetchFieldManager
 {
-    protected ExecutionContext ec;
-
-    protected ObjectProvider op;
-
     protected PropertyContainer propObj;
-
-    protected AbstractClassMetaData cmd;
 
     boolean embedded = false;
 
@@ -72,19 +66,18 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public FetchFieldManager(ObjectProvider op, PropertyContainer node)
     {
-        this(op.getExecutionContext(), node, op.getClassMetaData());
-        this.op = op;
+        super(op);
+        this.propObj = node;
         if (op.getEmbeddedOwners() != null)
         {
             embedded = true;
         }
     }
 
-    public FetchFieldManager(ExecutionContext ec, PropertyContainer node, AbstractClassMetaData acmd)
+    public FetchFieldManager(ExecutionContext ec, PropertyContainer node, AbstractClassMetaData cmd)
     {
-        this.ec = ec;
+        super(ec, cmd);
         this.propObj = node;
-        this.cmd = acmd;
         if (node == null)
         {
             throw new NucleusException("Attempt to create FetchFieldManager for " + op + " with null Neo4j Node!" +
