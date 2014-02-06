@@ -360,7 +360,7 @@ public class Neo4jUtils
         // Add any WHERE clause
         boolean multiple = false;
         String multitenancyText = null;
-        if (storeMgr.getStringProperty(PropertyNames.PROPERTY_TENANT_ID) != null)
+        if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
         {
             // Restriction on multitenancy discriminator for this tenant
             if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
@@ -370,7 +370,7 @@ public class Neo4jUtils
             else
             {
                 String propName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.MULTITENANCY_COLUMN);
-                String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_TENANT_ID);
+                String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);
                 multitenancyText = propName + " = \"" + value + "\"";
                 if (filterText != null)
                 {
