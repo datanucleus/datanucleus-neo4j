@@ -186,66 +186,68 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
-
-        boolean embedded = isMemberEmbedded(mmd, relationType, ownerMmd);
-        if (embedded)
+        if (relationType != RelationType.NONE)
         {
-            if (RelationType.isRelationSingleValued(relationType))
+            if (MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, ownerMmd))
             {
-                // Embedded PC object
-                // TODO Detect null embedded object
-                if (ownerMmd != null)
+                // Embedded field
+                if (RelationType.isRelationSingleValued(relationType))
                 {
-                    // Detect bidirectional relation so we know when to stop embedding
-                    if (RelationType.isBidirectional(relationType))
+                    // Embedded PC object
+                    // TODO Detect null embedded object
+                    if (ownerMmd != null)
                     {
-                        if ((ownerMmd.getMappedBy() != null && mmd.getName().equals(ownerMmd.getMappedBy())) ||
-                            (mmd.getMappedBy() != null && ownerMmd.getName().equals(mmd.getMappedBy())))
+                        // Detect bidirectional relation so we know when to stop embedding
+                        if (RelationType.isBidirectional(relationType))
                         {
-                            // Other side of owner bidirectional, so return the owner
-                            ObjectProvider[] ownerOps = op.getEmbeddedOwners();
-                            return (ownerOps != null && ownerOps.length > 0 ? ownerOps[0].getObject() : null);
+                            if ((ownerMmd.getMappedBy() != null && mmd.getName().equals(ownerMmd.getMappedBy())) ||
+                                    (mmd.getMappedBy() != null && ownerMmd.getName().equals(mmd.getMappedBy())))
+                            {
+                                // Other side of owner bidirectional, so return the owner
+                                ObjectProvider[] ownerOps = op.getEmbeddedOwners();
+                                return (ownerOps != null && ownerOps.length > 0 ? ownerOps[0].getObject() : null);
+                            }
+                        }
+                        else
+                        {
+                            // mapped-by not set but could have owner-field
+                            if (ownerMmd.getEmbeddedMetaData() != null &&
+                                    ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
+                                    ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
+                            {
+                                // This is the owner-field linking back to the owning object so return the owner
+                                ObjectProvider[] ownerOps = op.getEmbeddedOwners();
+                                return (ownerOps != null && ownerOps.length > 0 ? ownerOps[0].getObject() : null);
+                            }
                         }
                     }
-                    else
+
+                    AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+                    if (embcmd == null)
                     {
-                        // mapped-by not set but could have owner-field
-                        if (ownerMmd.getEmbeddedMetaData() != null &&
-                            ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
-                            ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
-                        {
-                            // This is the owner-field linking back to the owning object so return the owner
-                            ObjectProvider[] ownerOps = op.getEmbeddedOwners();
-                            return (ownerOps != null && ownerOps.length > 0 ? ownerOps[0].getObject() : null);
-                        }
+                        throw new NucleusUserException("Field " + mmd.getFullFieldName() +
+                                " marked as embedded but no such metadata");
                     }
-                }
 
-                AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
-                if (embcmd == null)
+                    // Extract the owner member metadata for this embedded object
+                    AbstractMemberMetaData embMmd = mmd;
+                    if (ownerMmd != null)
+                    {
+                        // Nested, so use from the embeddedMetaData
+                        embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
+                    }
+
+                    // TODO Cater for inherited embedded objects (discriminator)
+
+                    ObjectProvider embOP = ec.newObjectProviderForEmbedded(embcmd, op, fieldNumber);
+                    FieldManager ffm = new FetchEmbeddedFieldManager(embOP, propObj, embMmd);
+                    embOP.replaceFields(embcmd.getAllMemberPositions(), ffm);
+                    return embOP.getObject();
+                }
+                else if (RelationType.isRelationMultiValued(relationType))
                 {
-                    throw new NucleusUserException("Field " + mmd.getFullFieldName() +
-                        " marked as embedded but no such metadata");
+                    throw new NucleusUserException("Dont currently support embedded multivalued field : " + mmd.getFullFieldName());
                 }
-
-                // Extract the owner member metadata for this embedded object
-                AbstractMemberMetaData embMmd = mmd;
-                if (ownerMmd != null)
-                {
-                    // Nested, so use from the embeddedMetaData
-                    embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
-                }
-
-                // TODO Cater for inherited embedded objects (discriminator)
-
-                ObjectProvider embOP = ec.newObjectProviderForEmbedded(embcmd, op, fieldNumber);
-                FieldManager ffm = new FetchEmbeddedFieldManager(embOP, propObj, embMmd);
-                embOP.replaceFields(embcmd.getAllMemberPositions(), ffm);
-                return embOP.getObject();
-            }
-            else if (RelationType.isRelationMultiValued(relationType))
-            {
-                throw new NucleusUserException("Dont currently support embedded multivalued field : " + mmd.getFullFieldName());
             }
         }
 

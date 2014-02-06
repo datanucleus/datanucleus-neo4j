@@ -31,6 +31,7 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.FieldRole;
+import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractStoreFieldManager;
@@ -214,64 +215,66 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
-
-        boolean embedded = isMemberEmbedded(mmd, relationType, ownerMmd);
-        if (embedded)
+        if (relationType != RelationType.NONE)
         {
-            if (RelationType.isRelationSingleValued(relationType) && value != null)
+            if (MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, ownerMmd))
             {
-                // Embedded PC object
-                // TODO Cater for nulled embedded object on update
-                if (ownerMmd != null)
+                // Embedded Field
+                if (RelationType.isRelationSingleValued(relationType) && value != null)
                 {
-                    // Detect bidirectional relation so we know when to stop embedding
-                    if (RelationType.isBidirectional(relationType))
+                    // Embedded PC object
+                    // TODO Cater for nulled embedded object on update
+                    if (ownerMmd != null)
                     {
-                        // Field has mapped-by, so just use that
-                        if ((ownerMmd.getMappedBy() != null && mmd.getName().equals(ownerMmd.getMappedBy())) ||
-                            (mmd.getMappedBy() != null && ownerMmd.getName().equals(mmd.getMappedBy())))
+                        // Detect bidirectional relation so we know when to stop embedding
+                        if (RelationType.isBidirectional(relationType))
                         {
-                            // This is other side of owner bidirectional, so omit
-                            return;
+                            // Field has mapped-by, so just use that
+                            if ((ownerMmd.getMappedBy() != null && mmd.getName().equals(ownerMmd.getMappedBy())) ||
+                                (mmd.getMappedBy() != null && ownerMmd.getName().equals(mmd.getMappedBy())))
+                            {
+                                // This is other side of owner bidirectional, so omit
+                                return;
+                            }
+                        }
+                        else 
+                        {
+                            // mapped-by not set but could have owner-field
+                            if (ownerMmd.getEmbeddedMetaData() != null &&
+                                ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
+                                ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
+                            {
+                                // This is the owner-field linking back to the owning object so stop
+                                return;
+                            }
                         }
                     }
-                    else 
+
+                    AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(value.getClass(), clr);
+                    if (embcmd == null)
                     {
-                        // mapped-by not set but could have owner-field
-                        if (ownerMmd.getEmbeddedMetaData() != null &&
-                            ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
-                            ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
-                        {
-                            // This is the owner-field linking back to the owning object so stop
-                            return;
-                        }
+                        throw new NucleusUserException("Field " + mmd.getFullFieldName() +
+                            " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
                     }
+
+                    // Extract the owner member metadata for this embedded object
+                    AbstractMemberMetaData embMmd = mmd;
+                    if (ownerMmd != null)
+                    {
+                        // Nested, so use from the embeddedMetaData
+                        embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
+                    }
+
+                    // TODO Cater for inherited embedded objects (discriminator)
+
+                    ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
+                    FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmd);
+                    embOP.provideFields(embcmd.getAllMemberPositions(), ffm);
+                    return;
                 }
-
-                AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(value.getClass(), clr);
-                if (embcmd == null)
-                {
-                    throw new NucleusUserException("Field " + mmd.getFullFieldName() +
-                        " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
-                }
-
-                // Extract the owner member metadata for this embedded object
-                AbstractMemberMetaData embMmd = mmd;
-                if (ownerMmd != null)
-                {
-                    // Nested, so use from the embeddedMetaData
-                    embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
-                }
-
-                // TODO Cater for inherited embedded objects (discriminator)
-
-                ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmd);
-                embOP.provideFields(embcmd.getAllMemberPositions(), ffm);
-                return;
+                // TODO Support more types of embedded objects
+                throw new NucleusUserException("Don't currently support embedded field : " + mmd.getFullFieldName());
             }
-            // TODO Support more types of embedded objects
-            throw new NucleusUserException("Don't currently support embedded field : " + mmd.getFullFieldName());
         }
 
         if (mmd.isSerialized())
