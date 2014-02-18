@@ -29,6 +29,7 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.AbstractConnectionFactory;
+import org.datanucleus.store.connection.AbstractEmulatedXAResource;
 import org.datanucleus.store.connection.AbstractManagedConnection;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.connection.ManagedConnectionResourceListener;
@@ -251,79 +252,41 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     /**
      * Emulate the two phase protocol for non XA
      */
-    static class EmulatedXAResource implements XAResource
+    static class EmulatedXAResource extends AbstractEmulatedXAResource
     {
-        ManagedConnectionImpl mconn;
         Transaction graphTx;
 
         EmulatedXAResource(ManagedConnectionImpl mconn)
         {
-            this.mconn = mconn;
+            super(mconn);
             this.graphTx = mconn.graphTx;
-        }
-
-        public void start(Xid xid, int flags) throws XAException
-        {
         }
 
         public void commit(Xid xid, boolean onePhase) throws XAException
         {
-            NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
-                " is committing for transaction "+xid.toString()+" with onePhase="+onePhase);
+            super.commit(xid, onePhase);
             graphTx.success();
             graphTx.finish();
-            mconn.graphTx = null;
-            mconn.xaRes = null;
+            ((ManagedConnectionImpl)mconn).graphTx = null;
+            ((ManagedConnectionImpl)mconn).xaRes = null;
             NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
                 " committed connection for transaction "+xid.toString()+" with onePhase="+onePhase);
         }
 
         public void rollback(Xid xid) throws XAException
         {
-            NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
-                " is rolling back for transaction "+xid.toString());
+            super.rollback(xid);
             graphTx.failure();
             graphTx.finish();
-            mconn.graphTx = null;
-            mconn.xaRes = null;
+            ((ManagedConnectionImpl)mconn).graphTx = null;
+            ((ManagedConnectionImpl)mconn).xaRes = null;
             NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
                 " rolled back connection for transaction "+xid.toString());
         }
 
         public void end(Xid xid, int flags) throws XAException
         {
-            mconn.xaRes = null;
-        }
-
-        public void forget(Xid xid) throws XAException
-        {
-        }
-
-        public int prepare(Xid xid) throws XAException
-        {
-            NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
-                " is preparing for transaction "+xid.toString());
-            return 0;
-        }
-
-        public Xid[] recover(int flags) throws XAException
-        {
-            throw new XAException("Unsupported operation");
-        }
-
-        public int getTransactionTimeout() throws XAException
-        {
-            return 0;
-        }
-
-        public boolean setTransactionTimeout(int timeout) throws XAException
-        {
-            return false;
-        }
-
-        public boolean isSameRM(XAResource xares) throws XAException
-        {
-            return (this == xares);
+            ((ManagedConnectionImpl)mconn).xaRes = null;
         }
     }
 }
