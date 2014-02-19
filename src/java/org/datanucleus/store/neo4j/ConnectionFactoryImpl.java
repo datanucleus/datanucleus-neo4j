@@ -217,12 +217,12 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             if (graphTx != null)
             {
                 // End the current request
-                NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " is committing");
+                NucleusLogger.CONNECTION.debug("ManagedConnection " + this.toString() + " is committing");
                 graphTx.success();
                 graphTx.finish();
                 graphTx = null;
                 xaRes = null;
-                NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " committed connection");
+                NucleusLogger.CONNECTION.debug("ManagedConnection " + this.toString() + " committed connection");
             }
 
             // Remove the connection from pooling
@@ -232,6 +232,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             }
 
             conn = null;
+            xaRes = null;
         }
 
         public XAResource getXAResource()
@@ -269,8 +270,6 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             graphTx.finish();
             ((ManagedConnectionImpl)mconn).graphTx = null;
             ((ManagedConnectionImpl)mconn).xaRes = null;
-            NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
-                " committed connection for transaction "+xid.toString()+" with onePhase="+onePhase);
         }
 
         public void rollback(Xid xid) throws XAException
@@ -280,12 +279,11 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             graphTx.finish();
             ((ManagedConnectionImpl)mconn).graphTx = null;
             ((ManagedConnectionImpl)mconn).xaRes = null;
-            NucleusLogger.CONNECTION.debug("Managed connection "+this.toString()+
-                " rolled back connection for transaction "+xid.toString());
         }
 
         public void end(Xid xid, int flags) throws XAException
         {
+            super.end(xid, flags);
             ((ManagedConnectionImpl)mconn).xaRes = null;
         }
     }
