@@ -103,7 +103,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
 
                 // Create the Node
                 generatorNode = db.createNode();
-                generatorNode.setProperty(INCREMENT_VALUE_PROPERTY, new Long(0));
+                generatorNode.setProperty(INCREMENT_VALUE_PROPERTY, Long.valueOf(0));
                 db.index().forNodes(INCREMENT_INDEX).add(generatorNode, INCREMENT_NAME, name);
             }
 

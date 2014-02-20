@@ -561,7 +561,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                 paramValue = parameters.get(expr.getId());
                 paramValueSet = true;
             }
-            else if (parameters != null && parameters.containsKey(expr.getId()))
+            else if (parameters.containsKey(expr.getId()))
             {
                 // Positional parameter, but already encountered
                 paramValue = parameters.get(expr.getId());
@@ -643,7 +643,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             }
             else if (paramValue == null)
             {
-                Neo4jLiteral lit = new Neo4jLiteral(paramValue);
+                Neo4jLiteral lit = new Neo4jLiteral(null);
                 stack.push(lit);
                 precompilable = false;
                 return lit;
@@ -737,7 +737,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         }
         else if (litValue == null)
         {
-            Neo4jLiteral lit = new Neo4jLiteral(litValue);
+            Neo4jLiteral lit = new Neo4jLiteral(null);
             stack.push(lit);
             return lit;
         }

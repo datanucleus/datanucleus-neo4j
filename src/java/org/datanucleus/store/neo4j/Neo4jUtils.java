@@ -1013,20 +1013,23 @@ public class Neo4jUtils
             embMmd = embmmds[fieldNumber];
         }
 
-        ColumnMetaData[] colmds = embMmd.getColumnMetaData();
-        if (colmds != null && colmds.length > 0)
+        if (embMmd != null)
         {
-            // Try first column if specified
-            columnName = colmds[0].getName();
-        }
-        if (columnName == null)
-        {
-            // Fallback to the field/property name
-            columnName = embMmd.getName();
-        }
-        if (columnName == null)
-        {
-            columnName = embMmd.getName();
+            ColumnMetaData[] colmds = embMmd.getColumnMetaData();
+            if (colmds != null && colmds.length > 0)
+            {
+                // Try first column if specified
+                columnName = colmds[0].getName();
+            }
+            if (columnName == null)
+            {
+                // Fallback to the field/property name
+                columnName = embMmd.getName();
+            }
+            if (columnName == null)
+            {
+                columnName = embMmd.getName();
+            }
         }
         return columnName;
     }

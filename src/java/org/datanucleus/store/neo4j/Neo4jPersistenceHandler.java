@@ -165,8 +165,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
 
         // Create the PropertyContainer; currently only support as a Node.
-        // TODO Support persisting as "attributed relation" where the object has source and target objects
-        // and no other relation field
+        // TODO Support persisting as "attributed relation" where the object has source and target objects and no other relation field
         PropertyContainer propObj = db.createNode();
         if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
         {
@@ -520,7 +519,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
 
-            PropertyContainer propObj = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
             if (propObj == null)
             {
                 throw new NucleusException("Attempt to delete " + op + " yet no Node/Relationship found! See the log for details");

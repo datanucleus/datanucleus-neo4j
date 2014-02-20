@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusException;
-import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
@@ -171,11 +170,6 @@ public class JPQLQuery extends AbstractJPQLQuery
         {
             candidateClass = compilation.getCandidateClass();
             candidateClassName = candidateClass.getName();
-        }
-
-        if (candidateClass == null)
-        {
-            throw new NucleusUserException(LOCALISER.msg("021009", candidateClassName));
         }
 
         // Make sure any persistence info is loaded
