@@ -316,7 +316,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             }
             catch (Exception e)
             {
-                NucleusLogger.GENERAL.info("Query result clause " + compilation.getExprResult() + 
+                NucleusLogger.GENERAL.info("Query result clause " + StringUtils.objectArrayToString(compilation.getExprResult()) + 
                     " not totally supported via Cypher so will be processed in-memory");
                 resultComplete = false;
             }

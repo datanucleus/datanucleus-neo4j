@@ -208,7 +208,7 @@ public class Neo4jUtils
         else if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
             OID oid = (OID)id;
-            if (oid == null && storeMgr.isStrategyDatastoreAttributed(cmd, -1))
+            if (oid == null || storeMgr.isStrategyDatastoreAttributed(cmd, -1))
             {
                 // Not yet set, so return null (needs to be attributed in the datastore)
                 return null;
