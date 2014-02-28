@@ -28,6 +28,7 @@ import org.datanucleus.PersistenceNucleusContext;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.AbstractStoreManager;
+import org.datanucleus.store.StoreManager;
 
 /**
  * StoreManager for persisting to Neo4j.
@@ -71,11 +72,11 @@ public class Neo4jStoreManager extends AbstractStoreManager
     public Collection getSupportedOptions()
     {
         Set set = new HashSet();
-        set.add("ApplicationIdentity");
-        set.add("DatastoreIdentity");
-        set.add("NonDurableIdentity");
-        set.add("ORM");
-        set.add("TransactionIsolationLevel.read-committed");
+        set.add(StoreManager.OPTION_APPLICATION_ID);
+        set.add(StoreManager.OPTION_DATASTORE_ID);
+        set.add(StoreManager.OPTION_NONDURABLE_ID);
+        set.add(StoreManager.OPTION_ORM);
+        set.add(StoreManager.OPTION_TXN_ISOLATION_READ_COMMITTED);
         return set;
     }
 
