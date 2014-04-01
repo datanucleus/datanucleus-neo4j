@@ -45,9 +45,9 @@ public class Neo4jStoreManager extends AbstractStoreManager
     public static String RELATIONSHIP_FIELD_NAME_NONOWNER = "DN_FIELD_NAME_NONOWNER";
     public static String RELATIONSHIP_INDEX_NAME = "DN_CONTAINER_INDEX";
 
-    /** Property name added to relationship to store the key of a map when we have Map<NonPC, PC> and the relationship is owner-value. */
+    /** Property name added to relationship to store the key of a map when we have Map&lt;NonPC, PC&gt; and the relationship is owner-value. */
     public static String RELATIONSHIP_MAP_KEY_VALUE = "DN_MAP_KEY";
-    /** Property name added to relationship to store the value of a map when we have Map<PC, NonPC> and the relationship is owner-key. */
+    /** Property name added to relationship to store the value of a map when we have Map&lt;PC, NonPC&gt; and the relationship is owner-key. */
     public static String RELATIONSHIP_MAP_VAL_VALUE = "DN_MAP_VAL";
 
     /** key used in metadata for whether a class is persisted as an attributed relation (Relationship) */

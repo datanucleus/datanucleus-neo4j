@@ -328,6 +328,7 @@ public class Neo4jUtils
      * @param ec ExecutionContext
      * @param cmd Metadata for the candidate
      * @param candidateAlias Alias for the candidate
+     * @param subclasses Whether to include subclasses
      * @param filterText Any text to apply to the filter (optional)
      * @param resultText Any result text (optional)
      * @param orderText Any order text (optional)

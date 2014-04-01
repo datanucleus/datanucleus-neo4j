@@ -403,7 +403,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult implements Serializ
      * Handle serialisation by returning a java.util.ArrayList of all of the results for this query
      * after disconnecting the query which has the consequence of enforcing the load of all objects.
      * @return The object to serialise
-     * @throws ObjectStreamException
+     * @throws ObjectStreamException Thrown if an error occurs
      */
     protected Object writeReplace() throws ObjectStreamException
     {
