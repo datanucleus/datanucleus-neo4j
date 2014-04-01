@@ -17,7 +17,7 @@
     </description>
 
     <properties>
-        <dn.core.version>4.0.0-m2-SNAPSHOT</dn.core.version>
+        <dn.core.version>4.0.0-m2</dn.core.version>
         <neo4j.version>1.9.4</neo4j.version>
     </properties>
 
