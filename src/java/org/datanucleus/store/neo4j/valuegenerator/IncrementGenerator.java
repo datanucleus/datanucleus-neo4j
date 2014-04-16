@@ -27,7 +27,6 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
-import org.datanucleus.store.valuegenerator.ValueGenerator;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -38,7 +37,7 @@ import org.neo4j.graphdb.Node;
  * Each class/field where "increment" is specified will have its own Node with current value property, and
  * all "increment" Nodes are in a special index "DN_INCREMENT_INDEX".
  */
-public class IncrementGenerator extends AbstractDatastoreGenerator implements ValueGenerator
+public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
 {
     /** The index containing all increment nodes. */
     protected static final String INCREMENT_INDEX = "DN_INCREMENT_INDEX";
@@ -70,9 +69,9 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
     }
 
     @Override
-    protected ValueGenerationBlock reserveBlock(long size)
+    protected ValueGenerationBlock<Long> reserveBlock(long size)
     {
-        List oids = new ArrayList();
+        List<Long> oids = new ArrayList<Long>();
         try
         {
             ManagedConnection mconn = connectionProvider.retrieveConnection();
@@ -122,6 +121,6 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
             connectionProvider.releaseConnection();
         }
 
-        return new ValueGenerationBlock(oids);
+        return new ValueGenerationBlock<Long>(oids);
     }
 }
