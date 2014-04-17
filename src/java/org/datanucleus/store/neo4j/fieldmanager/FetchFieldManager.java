@@ -239,7 +239,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     // TODO Cater for inherited embedded objects (discriminator)
 
-                    ObjectProvider embOP = ec.newObjectProviderForEmbedded(embcmd, op, fieldNumber);
+                    ObjectProvider embOP = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, op, fieldNumber);
                     FieldManager ffm = new FetchEmbeddedFieldManager(embOP, propObj, embMmd);
                     embOP.replaceFields(embcmd.getAllMemberPositions(), ffm);
                     return embOP.getObject();
