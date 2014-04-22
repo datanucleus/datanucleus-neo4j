@@ -131,7 +131,7 @@ public class Neo4jUtils
                 int[] pkFieldNumbers = cmd.getPKMemberPositions();
                 if (pkFieldNumbers.length == 1)
                 {
-                    Long key = (Long)ec.getApiAdapter().getTargetKeyForSingleFieldIdentity(id);
+                    Long key = (Long)IdentityUtils.getTargetKeyForSingleFieldIdentity(id);
                     if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
                     {
                         NucleusLogger.DATASTORE_NATIVE.debug("Retrieving PropertyContainer for id=" + key);
@@ -180,7 +180,7 @@ public class Neo4jUtils
                 Object value = null;
                 if (cmd.usesSingleFieldIdentityClass())
                 {
-                    value = ec.getApiAdapter().getTargetKeyForSingleFieldIdentity(id);
+                    value = IdentityUtils.getTargetKeyForSingleFieldIdentity(id);
                 }
                 else
                 {
