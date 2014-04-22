@@ -118,8 +118,7 @@ public class Neo4jUtils
             // Using Neo4j "node id"/"relationship id" as the identity, so use getNodeById/getRelationshipById
             if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                OID oid = (OID)id;
-                Long key = (Long)oid.getKeyValue();
+                Long key = (Long)IdentityUtils.getTargetKeyForDatastoreIdentity(id);
                 if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
                 {
                     NucleusLogger.DATASTORE_NATIVE.debug("Retrieving PropertyContainer for id=" + key);
@@ -207,13 +206,12 @@ public class Neo4jUtils
         }
         else if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            OID oid = (OID)id;
-            if (oid == null || storeMgr.isStrategyDatastoreAttributed(cmd, -1))
+            if (id == null || storeMgr.isStrategyDatastoreAttributed(cmd, -1))
             {
                 // Not yet set, so return null (needs to be attributed in the datastore)
                 return null;
             }
-            Object value = oid.getKeyValue();
+            Object value = IdentityUtils.getTargetKeyForDatastoreIdentity(id);
             String propName = ec.getStoreManager().getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
             cypherString.append(" WHERE (pc.");
             cypherString.append(propName);
