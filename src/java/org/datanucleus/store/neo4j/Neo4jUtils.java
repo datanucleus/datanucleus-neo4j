@@ -30,7 +30,6 @@ import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.identity.IdentityUtils;
-import org.datanucleus.identity.OIDFactory;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
@@ -603,7 +602,7 @@ public class Neo4jUtils
         StoreManager storeMgr = ec.getStoreManager();
         Object idKey = propObj.getProperty(storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN));
 
-        Object id = OIDFactory.getInstance(ec.getNucleusContext(), cmd.getFullClassName(), idKey);
+        Object id = ec.getNucleusContext().getIdentityManager().getDatastoreId(cmd.getFullClassName(), idKey);
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
         ObjectProvider op = ec.findObjectProvider(pc);
