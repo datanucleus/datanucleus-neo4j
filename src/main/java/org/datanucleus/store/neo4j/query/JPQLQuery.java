@@ -320,6 +320,7 @@ public class JPQLQuery extends AbstractJPQLQuery
             }
             else if (type == BULK_UPDATE)
             {
+                // TODO Support BULK UPDATE
                 throw new NucleusException("Bulk Update is not yet supported");
             }
 
