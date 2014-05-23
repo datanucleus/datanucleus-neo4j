@@ -57,9 +57,6 @@ import org.neo4j.graphdb.Relationship;
  */
 public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 {
-    protected static final Localiser LOCALISER_NEO4J = Localiser.getInstance(
-        "org.datanucleus.store.neo4j.Localisation", Neo4jStoreManager.class.getClassLoader());
-
     public Neo4jPersistenceHandler(StoreManager storeMgr)
     {
         super(storeMgr);
@@ -87,8 +84,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.InsertObjects.Start",
-                    StringUtils.objectArrayToString(ops)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.InsertObjects.Start", StringUtils.objectArrayToString(ops)));
             }
 
             // Do initial insert to create PropertyContainers (Node/Relationship)
@@ -114,8 +110,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.ExecutionTime", 
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
             if (ec.getStatistics() != null)
             {
@@ -155,7 +150,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             try
             {
                 locateObject(op);
-                throw new NucleusUserException(LOCALISER_NEO4J.msg("Neo4j.Insert.ObjectWithIdAlreadyExists",
+                throw new NucleusUserException(Localiser.msg("Neo4j.Insert.ObjectWithIdAlreadyExists",
                     op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
             catch (NucleusObjectNotFoundException onfe)
@@ -186,7 +181,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 op.setPostStoreNewObjectId(id);
                 if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.Insert.ObjectPersistedWithIdentity",
+                    NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithIdentity",
                         op.getObjectAsPrintable(), id));
                 }
             }
@@ -207,8 +202,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                         op.setPostStoreNewObjectId(id);
                         if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
                         {
-                            NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.Insert.ObjectPersistedWithIdentity",
-                                op.getObjectAsPrintable(), id));
+                            NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithIdentity", op.getObjectAsPrintable(), id));
                         }
                     }
                 }
@@ -232,7 +226,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 op.setTransactionalVersion(Long.valueOf(versionNumber));
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE.debug(LOCALISER_NEO4J.msg("Neo4j.Insert.ObjectPersistedWithVersion",
+                    NucleusLogger.DATASTORE.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithVersion",
                         op.getObjectAsPrintable(), op.getInternalObjectId(), "" + versionNumber));
                 }
                 if (vermd.getFieldName() != null)
@@ -306,8 +300,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.Insert.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
             // Step 1 : Create PropertyContainer with non-relation fields
@@ -324,8 +317,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.ExecutionTime", 
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
             if (ec.getStatistics() != null)
             {
@@ -416,8 +408,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                     }
                     fieldStr.append(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
                 }
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.Update.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Update.Start", op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
             }
 
             PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
@@ -489,7 +480,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.ExecutionTime", 
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.ExecutionTime", 
                     (System.currentTimeMillis() - startTime)));
             }
         }
@@ -533,8 +524,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.Delete.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
             if (propObj instanceof Node)
@@ -576,8 +566,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER_NEO4J.msg("Neo4j.ExecutionTime", 
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
         }
         catch (Exception e)
@@ -625,8 +614,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_RETRIEVE.debug(LOCALISER_NEO4J.msg("Neo4j.Fetch.Start", 
-                    op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("Neo4j.Fetch.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
             // Find the Node for this ObjectProvider
@@ -661,8 +649,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
             if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_RETRIEVE.debug(LOCALISER_NEO4J.msg("Neo4j.ExecutionTime",
-                    (System.currentTimeMillis() - startTime)));
+                NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("Neo4j.ExecutionTime", (System.currentTimeMillis() - startTime)));
             }
             if (ec.getStatistics() != null)
             {

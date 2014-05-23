@@ -33,7 +33,6 @@ import org.datanucleus.store.connection.AbstractEmulatedXAResource;
 import org.datanucleus.store.connection.AbstractManagedConnection;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.connection.ManagedConnectionResourceListener;
-import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -51,9 +50,6 @@ import org.neo4j.graphdb.factory.GraphDatabaseFactory;
  */
 public class ConnectionFactoryImpl extends AbstractConnectionFactory
 {
-    protected static final Localiser LOCALISER = Localiser.getInstance(
-        "org.datanucleus.store.neo4j.Localisation", Neo4jStoreManager.class.getClassLoader());
-
     GraphDatabaseService graphDB;
 
     /**

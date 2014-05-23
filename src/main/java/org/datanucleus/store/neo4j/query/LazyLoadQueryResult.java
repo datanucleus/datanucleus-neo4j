@@ -34,6 +34,7 @@ import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.query.AbstractQueryResult;
 import org.datanucleus.store.query.AbstractQueryResultIterator;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.SoftValueMap;
 import org.datanucleus.util.StringUtils;
@@ -128,7 +129,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult implements Serializ
         if (loadResultsAtCommit && isOpen() && resultIterator != null)
         {
             // Query connection closing message
-            NucleusLogger.QUERY.info(LOCALISER.msg("052606", query.toString()));
+            NucleusLogger.QUERY.info(Localiser.msg("052606", query.toString()));
 
             synchronized (this)
             {
@@ -332,7 +333,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult implements Serializ
                 if (!isOpen())
                 {
                     // Spec 14.6.7 Calling next() on closed Query will throw NoSuchElementException
-                    throw new NoSuchElementException(LOCALISER.msg("052600"));
+                    throw new NoSuchElementException(Localiser.msg("052600"));
                 }
 
                 if (nextRowNum < itemsByIndex.size())
@@ -349,7 +350,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult implements Serializ
                     ++nextRowNum;
                     return pojo;
                 }
-                throw new NoSuchElementException(LOCALISER.msg("052602"));
+                throw new NoSuchElementException(Localiser.msg("052602"));
             }
         }
 

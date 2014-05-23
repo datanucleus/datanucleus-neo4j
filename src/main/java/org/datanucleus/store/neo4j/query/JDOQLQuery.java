@@ -37,6 +37,7 @@ import org.datanucleus.store.query.AbstractJDOQLQuery;
 import org.datanucleus.store.query.AbstractQueryResult;
 import org.datanucleus.store.query.QueryManager;
 import org.datanucleus.store.query.QueryResult;
+import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 import org.neo4j.graphdb.GraphDatabaseService;
 
@@ -169,7 +170,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
         if (candidateClass == null)
         {
-            throw new NucleusUserException(LOCALISER.msg("021009", candidateClassName));
+            throw new NucleusUserException(Localiser.msg("021009", candidateClassName));
         }
 
         // Make sure any persistence info is loaded
@@ -229,7 +230,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(LOCALISER.msg("021046", "JDOQL", getSingleStringQuery(), null));
+                NucleusLogger.QUERY.debug(Localiser.msg("021046", "JDOQL", getSingleStringQuery(), null));
             }
 
             List candidates = null;
@@ -302,7 +303,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(LOCALISER.msg("021074", "JDOQL", 
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", 
                     "" + (System.currentTimeMillis() - startTime)));
             }
 
@@ -377,7 +378,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         if (NucleusLogger.QUERY.isDebugEnabled())
         {
             startTime = System.currentTimeMillis();
-            NucleusLogger.QUERY.debug(LOCALISER.msg("021083", getLanguage(), toString()));
+            NucleusLogger.QUERY.debug(Localiser.msg("021083", getLanguage(), toString()));
         }
 
         // Generate filter, order etc as appropriate
@@ -401,7 +402,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
         if (NucleusLogger.QUERY.isDebugEnabled())
         {
-            NucleusLogger.QUERY.debug(LOCALISER.msg("021084", getLanguage(), System.currentTimeMillis()-startTime));
+            NucleusLogger.QUERY.debug(Localiser.msg("021084", getLanguage(), System.currentTimeMillis()-startTime));
         }
     }
 

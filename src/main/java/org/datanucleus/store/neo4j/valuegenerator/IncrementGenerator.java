@@ -27,6 +27,7 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
+import org.datanucleus.util.Localiser;
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -97,7 +98,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
             {
                 if (!storeMgr.getSchemaHandler().isAutoCreateTables())
                 {
-                    throw new NucleusUserException(LOCALISER.msg("040011", name));
+                    throw new NucleusUserException(Localiser.msg("040011", name));
                 }
 
                 // Create the Node

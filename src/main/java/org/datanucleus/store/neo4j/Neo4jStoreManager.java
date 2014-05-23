@@ -29,12 +29,18 @@ import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.StoreManager;
+import org.datanucleus.util.Localiser;
 
 /**
  * StoreManager for persisting to Neo4j.
  */
 public class Neo4jStoreManager extends AbstractStoreManager
 {
+    static
+    {
+        Localiser.registerBundle("org.datanucleus.store.neo4j.Localisation", Neo4jStoreManager.class.getClassLoader());
+    }
+
     /** Key used for storing the PropertyContainer in an ObjectProvider associatedValues. */
     public static String OBJECT_PROVIDER_PROPCONTAINER = "DN_OP_PROPCONTAINER";
 
