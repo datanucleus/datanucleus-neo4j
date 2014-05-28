@@ -712,7 +712,7 @@ public class Neo4jUtils
      * @param fieldRole The role of the field
      * @return The value to store
      */
-    public static Object getStoredValueForField(ExecutionContext ec, AbstractMemberMetaData mmd, Object value, int fieldRole)
+    public static Object getStoredValueForField(ExecutionContext ec, AbstractMemberMetaData mmd, Object value, FieldRole fieldRole)
     {
         if (value == null)
         {
@@ -879,7 +879,7 @@ public class Neo4jUtils
      * @param fieldRole The role of this value for the field
      * @return The value to put in the field
      */
-    public static Object getFieldValueFromStored(ExecutionContext ec, AbstractMemberMetaData mmd, Object value, int fieldRole)
+    public static Object getFieldValueFromStored(ExecutionContext ec, AbstractMemberMetaData mmd, Object value, FieldRole fieldRole)
     {
         if (value == null)
         {
