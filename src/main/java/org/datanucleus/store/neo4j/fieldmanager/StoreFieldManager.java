@@ -71,12 +71,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
-    // TODO Drop this and use getColumnMapping
-    protected String getPropName(int fieldNumber)
-    {
-        return getColumnMapping(fieldNumber).getColumn(0).getName();
-    }
-
     /* (non-Javadoc)
      * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#storeBooleanField(int, boolean)
      */
@@ -87,7 +81,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -100,7 +94,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -113,7 +107,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -126,7 +120,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -139,7 +133,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -152,7 +146,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -165,7 +159,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -178,7 +172,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(getColumnMapping(fieldNumber).getColumn(0).getName(), value);
     }
 
     /* (non-Javadoc)
@@ -191,15 +185,16 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             return;
         }
+        String propName = getColumnMapping(fieldNumber).getColumn(0).getName();
         if (value == null)
         {
             if (!insert)
             {
-                propObj.removeProperty(getPropName(fieldNumber));
+                propObj.removeProperty(propName);
             }
             return;
         }
-        propObj.setProperty(getPropName(fieldNumber), value);
+        propObj.setProperty(propName, value);
     }
 
     /* (non-Javadoc)
@@ -286,7 +281,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
         ExecutionContext ec = op.getExecutionContext();
-        String propName = getPropName(fieldNumber); // TODO Cater for multicol members
+        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+        String propName = mapping.getColumn(0).getName(); // TODO Cater for multicol members
 
         if (!insert && propObj.hasProperty(propName) && value == null)
         {

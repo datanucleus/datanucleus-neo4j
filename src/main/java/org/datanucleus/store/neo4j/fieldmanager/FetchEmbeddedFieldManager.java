@@ -54,12 +54,6 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
         return table.getMemberColumnMappingForEmbeddedMember(embMmds);
     }
 
-    // TODO Drop this and use getColumnMapping
-    protected String getPropName(int fieldNumber)
-    {
-        return getColumnMapping(fieldNumber).getColumn(0).getName();
-    }
-
     @Override
     public Object fetchObjectField(int fieldNumber)
     {

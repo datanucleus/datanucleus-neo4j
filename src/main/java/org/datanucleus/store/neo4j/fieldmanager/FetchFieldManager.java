@@ -95,19 +95,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
-    // TODO Drop this and use getColumnMapping
-    protected String getPropName(int fieldNumber)
-    {
-        return getColumnMapping(fieldNumber).getColumn(0).getName();
-    }
-
     /* (non-Javadoc)
      * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchBooleanField(int)
      */
     @Override
     public boolean fetchBooleanField(int fieldNumber)
     {
-        return (Boolean)propObj.getProperty(getPropName(fieldNumber));
+        return (Boolean)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -116,7 +110,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public byte fetchByteField(int fieldNumber)
     {
-        return (Byte)propObj.getProperty(getPropName(fieldNumber));
+        return (Byte)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -125,7 +119,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public char fetchCharField(int fieldNumber)
     {
-        return (Character)propObj.getProperty(getPropName(fieldNumber));
+        return (Character)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -134,7 +128,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public double fetchDoubleField(int fieldNumber)
     {
-        return (Double)propObj.getProperty(getPropName(fieldNumber));
+        return (Double)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -143,7 +137,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public float fetchFloatField(int fieldNumber)
     {
-        return (Float)propObj.getProperty(getPropName(fieldNumber));
+        return (Float)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -152,7 +146,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public int fetchIntField(int fieldNumber)
     {
-        return (Integer)propObj.getProperty(getPropName(fieldNumber));
+        return (Integer)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -161,7 +155,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public long fetchLongField(int fieldNumber)
     {
-        return (Long)propObj.getProperty(getPropName(fieldNumber));
+        return (Long)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -170,7 +164,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public short fetchShortField(int fieldNumber)
     {
-        return (Short)propObj.getProperty(getPropName(fieldNumber));
+        return (Short)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
@@ -179,7 +173,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public String fetchStringField(int fieldNumber)
     {
-        String propName = getPropName(fieldNumber);
+        String propName = getColumnMapping(fieldNumber).getColumn(0).getName();
         return propObj.hasProperty(propName) ? (String)propObj.getProperty(propName) : null;
     }
 
@@ -285,12 +279,13 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             return processMultiValuedRelationForNode(mmd, relationType, ec, clr, node);
         }
 
-        String fieldName = getPropName(fieldNumber);
-        if (!propObj.hasProperty(fieldName))
+        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+        String propName = mapping.getColumn(0).getName(); // TODO Support multicol members
+        if (!propObj.hasProperty(propName))
         {
             return null;
         }
-        Object value = propObj.getProperty(fieldName);
+        Object value = propObj.getProperty(propName);
 
         if (mmd.isSerialized())
         {

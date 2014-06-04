@@ -55,12 +55,6 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
         return table.getMemberColumnMappingForEmbeddedMember(embMmds);
     }
 
-    // TODO Remove this and use getColumnMapping
-    protected String getPropName(int fieldNumber)
-    {
-        return getColumnMapping(fieldNumber).getColumn(0).getName();
-    }
-
     @Override
     public void storeObjectField(int fieldNumber, Object value)
     {

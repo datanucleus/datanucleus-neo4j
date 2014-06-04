@@ -816,10 +816,8 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                         // Get property name for field of embedded object
                         embMmds.add(mmd);
                         return table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0).getName();
-//                        return Neo4jUtils.getPropertyNameForEmbeddedField(embMmd, mmd.getAbsoluteFieldNumber());
                     }
                     return table.getMemberColumnMappingForMember(mmd).getColumn(0).getName();
-//                    return ec.getStoreManager().getNamingFactory().getColumnName(mmd, ColumnType.COLUMN);
                 }
                 else
                 {
