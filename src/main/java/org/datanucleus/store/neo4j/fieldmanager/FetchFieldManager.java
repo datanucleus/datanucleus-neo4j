@@ -19,6 +19,7 @@ package org.datanucleus.store.neo4j.fieldmanager;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,7 +44,8 @@ import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.Neo4jStoreManager;
 import org.datanucleus.store.neo4j.Neo4jUtils;
-import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.neo4j.graphdb.Node;
@@ -56,6 +58,8 @@ import org.neo4j.graphdb.RelationshipType;
  */
 public class FetchFieldManager extends AbstractFetchFieldManager
 {
+    protected Table table;
+
     protected PropertyContainer propObj;
 
     boolean embedded = false;
@@ -63,9 +67,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     /** Metadata for the owner field if this is embedded. */
     protected AbstractMemberMetaData ownerMmd = null;
 
-    public FetchFieldManager(ObjectProvider op, PropertyContainer node)
+    public FetchFieldManager(ObjectProvider op, PropertyContainer node, Table table)
     {
         super(op);
+        this.table = table;
         this.propObj = node;
         if (op.getEmbeddedOwners() != null)
         {
@@ -73,9 +78,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
     }
 
-    public FetchFieldManager(ExecutionContext ec, PropertyContainer node, AbstractClassMetaData cmd)
+    public FetchFieldManager(ExecutionContext ec, PropertyContainer node, AbstractClassMetaData cmd, Table table)
     {
         super(ec, cmd);
+        this.table = table;
         this.propObj = node;
         if (node == null)
         {
@@ -84,10 +90,15 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
     }
 
+    protected MemberColumnMapping getColumnMapping(int fieldNumber)
+    {
+        return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
+    }
+
+    // TODO Drop this and use getColumnMapping
     protected String getPropName(int fieldNumber)
     {
-        return ec.getStoreManager().getNamingFactory().getColumnName(
-            cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber), ColumnType.COLUMN);
+        return getColumnMapping(fieldNumber).getColumn(0).getName();
     }
 
     /* (non-Javadoc)
@@ -194,7 +205,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 if (RelationType.isRelationSingleValued(relationType))
                 {
                     // Embedded PC object
-                    // TODO Detect null embedded object
                     if (ownerMmd != null)
                     {
                         // Detect bidirectional relation so we know when to stop embedding
@@ -212,8 +222,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         {
                             // mapped-by not set but could have owner-field
                             if (ownerMmd.getEmbeddedMetaData() != null &&
-                                    ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
-                                    ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
+                                ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
+                                ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
                             {
                                 // This is the owner-field linking back to the owning object so return the owner
                                 ObjectProvider[] ownerOps = op.getEmbeddedOwners();
@@ -225,22 +235,17 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
                     if (embcmd == null)
                     {
-                        throw new NucleusUserException("Field " + mmd.getFullFieldName() +
-                                " marked as embedded but no such metadata");
+                        throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
                     }
 
-                    // Extract the owner member metadata for this embedded object
-                    AbstractMemberMetaData embMmd = mmd;
-                    if (ownerMmd != null)
-                    {
-                        // Nested, so use from the embeddedMetaData
-                        embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
-                    }
+                    // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
 
                     // TODO Cater for inherited embedded objects (discriminator)
 
+                    List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
+                    embMmds.add(mmd);
                     ObjectProvider embOP = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, op, fieldNumber);
-                    FieldManager ffm = new FetchEmbeddedFieldManager(embOP, propObj, embMmd);
+                    FieldManager ffm = new FetchEmbeddedFieldManager(embOP, propObj, embMmds, table);
                     embOP.replaceFields(embcmd.getAllMemberPositions(), ffm);
                     return embOP.getObject();
                 }
@@ -251,6 +256,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
         }
 
+        return fetchNonEmbeddedObjectField(mmd, relationType, clr);
+    }
+
+    protected Object fetchNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr)
+    {
+        int fieldNumber = mmd.getAbsoluteFieldNumber();
         if (RelationType.isRelationSingleValued(relationType))
         {
             if (!(propObj instanceof Node))

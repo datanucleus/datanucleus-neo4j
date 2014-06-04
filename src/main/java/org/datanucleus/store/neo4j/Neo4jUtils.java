@@ -49,12 +49,11 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.neo4j.query.LazyLoadQueryResult;
 import org.datanucleus.store.query.Query;
-import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.NucleusLogger;
-
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -109,6 +108,7 @@ public class Neo4jUtils
             AbstractClassMetaData cmd, Object id)
     {
         StoreManager storeMgr = ec.getStoreManager();
+        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
 
         boolean attributedRelation = Neo4jUtils.classIsAttributedRelation(cmd);
         if (cmd.pkIsDatastoreAttributed(storeMgr))
@@ -184,7 +184,7 @@ public class Neo4jUtils
                     value = IdentityUtils.getValueForMemberInId(id, pkMmd);
                 }
 
-                cypherString.append("pc." + ec.getStoreManager().getNamingFactory().getColumnName(pkMmd, ColumnType.COLUMN));
+                cypherString.append("pc." + table.getMemberColumnMappingForMember(pkMmd).getColumn(0).getName());
                 cypherString.append(" = ");
                 Object storedValue = Neo4jUtils.getStoredValueForField(ec, pkMmd, value, FieldRole.ROLE_FIELD);
                 if (storedValue instanceof String)
@@ -210,7 +210,7 @@ public class Neo4jUtils
                 return null;
             }
             Object value = IdentityUtils.getTargetKeyForDatastoreIdentity(id);
-            String propName = ec.getStoreManager().getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN);
+            String propName = table.getDatastoreIdColumn().getName();
             cypherString.append(" WHERE (pc.");
             cypherString.append(propName);
             cypherString.append(" = ");
@@ -225,7 +225,7 @@ public class Neo4jUtils
         if (cmd.hasDiscriminatorStrategy())
         {
             DiscriminatorMetaData discmd = cmd.getDiscriminatorMetaData();
-            String propName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DISCRIMINATOR_COLUMN);
+            String propName = table.getDiscriminatorColumn().getName();
             Object discVal = null;
             if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
             {
@@ -335,6 +335,7 @@ public class Neo4jUtils
     public static String getCypherTextForQuery(ExecutionContext ec, AbstractClassMetaData cmd, String candidateAlias,
             boolean subclasses, String filterText, String resultText, String orderText, Long rangeFromIncl, Long rangeToExcl)
     {
+        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
         boolean attributedRelation = Neo4jUtils.classIsAttributedRelation(cmd);
         if (candidateAlias == null)
         {
@@ -366,7 +367,7 @@ public class Neo4jUtils
             }
             else
             {
-                String propName = storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.MULTITENANCY_COLUMN);
+                String propName = table.getMultitenancyColumn().getName();
                 String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);
                 multitenancyText = propName + " = \"" + value + "\"";
                 if (filterText != null)
@@ -544,11 +545,11 @@ public class Neo4jUtils
     protected static Object getObjectUsingApplicationIdForDBObject(final PropertyContainer propObj, 
             final AbstractClassMetaData cmd, final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers)
     {
-        final FieldManager fm = new FetchFieldManager(ec, propObj, cmd);
+        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, 
             false, fm);
 
-        StoreManager storeMgr = ec.getStoreManager();
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
         ObjectProvider op = ec.findObjectProvider(pc);
@@ -588,7 +589,7 @@ public class Neo4jUtils
                 else
                 {
                     // Get the surrogate version from the datastore
-                    version = propObj.getProperty(storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN));
+                    version = propObj.getProperty(table.getVersionColumn().getName());
                 }
                 op.setVersion(version);
             }
@@ -600,7 +601,8 @@ public class Neo4jUtils
             final AbstractClassMetaData cmd, final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers)
     {
         StoreManager storeMgr = ec.getStoreManager();
-        Object idKey = propObj.getProperty(storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.DATASTOREID_COLUMN));
+        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        Object idKey = propObj.getProperty(table.getDatastoreIdColumn().getName());
 
         Object id = ec.getNucleusContext().getIdentityManager().getDatastoreId(cmd.getFullClassName(), idKey);
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
@@ -608,10 +610,9 @@ public class Neo4jUtils
         ObjectProvider op = ec.findObjectProvider(pc);
         if (op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
-            // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
-            // so load the fieldValues from it.
+            // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created so load the fieldValues from it.
             op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            final FieldManager fm = new FetchFieldManager(ec, propObj, cmd);
+            final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
             op.loadFieldValues(new FieldValues()
             {
                 public void fetchFields(ObjectProvider op)
@@ -642,7 +643,7 @@ public class Neo4jUtils
                 else
                 {
                     // Get the surrogate version from the datastore
-                    version = propObj.getProperty(storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN));
+                    version = propObj.getProperty(table.getVersionColumn().getName());
                 }
                 op.setVersion(version);
             }
@@ -657,13 +658,14 @@ public class Neo4jUtils
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
         ObjectProvider op = ec.findObjectProvider(pc);
+        Table table = op.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
 
         if (op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
             // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
             // so load the fieldValues from it.
             op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            final FieldManager fm = new FetchFieldManager(ec, propObj, cmd);
+            final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
             op.loadFieldValues(new FieldValues()
             {
                 public void fetchFields(ObjectProvider op)
@@ -683,7 +685,6 @@ public class Neo4jUtils
             if (cmd.isVersioned())
             {
                 // Set the version on the retrieved object
-                StoreManager storeMgr = ec.getStoreManager();
                 Object version = null;
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
                 if (vermd.getFieldName() != null)
@@ -695,7 +696,7 @@ public class Neo4jUtils
                 else
                 {
                     // Get the surrogate version from the datastore
-                    version = propObj.getProperty(storeMgr.getNamingFactory().getColumnName(cmd, ColumnType.VERSION_COLUMN));
+                    version = propObj.getProperty(table.getVersionColumn().getName());
                 }
                 op.setVersion(version);
             }

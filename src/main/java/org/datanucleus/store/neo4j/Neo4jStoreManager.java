@@ -19,6 +19,7 @@ package org.datanucleus.store.neo4j;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,9 +28,15 @@ import org.datanucleus.ExecutionContext;
 import org.datanucleus.PersistenceNucleusContext;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.ClassMetaData;
+import org.datanucleus.metadata.ClassPersistenceModifier;
 import org.datanucleus.store.AbstractStoreManager;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
+import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.store.schema.table.CompleteClassTable;
 import org.datanucleus.util.Localiser;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 /**
  * StoreManager for persisting to Neo4j.
@@ -138,5 +145,64 @@ public class Neo4jStoreManager extends AbstractStoreManager
             return true;
         }
         return false;
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.store.AbstractStoreManager#manageClasses(org.datanucleus.ClassLoaderResolver, java.lang.String[])
+     */
+    @Override
+    public void manageClasses(ClassLoaderResolver clr, String... classNames)
+    {
+        if (classNames == null)
+        {
+            return;
+        }
+
+        ManagedConnection mconn = getConnection(-1);
+        try
+        {
+            GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
+
+            manageClasses(classNames, clr, db);
+        }
+        finally
+        {
+            mconn.release();
+        }
+    }
+
+    public void manageClasses(String[] classNames, ClassLoaderResolver clr, GraphDatabaseService db)
+    {
+        if (classNames == null)
+        {
+            return;
+        }
+
+        // Filter out any "simple" type classes
+        String[] filteredClassNames = getNucleusContext().getTypeManager().filterOutSupportedSecondClassNames(classNames);
+
+        // Find the ClassMetaData for these classes and all referenced by these classes
+        Set<String> clsNameSet = new HashSet<String>();
+        Iterator iter = getMetaDataManager().getReferencedClasses(filteredClassNames, clr).iterator();
+        while (iter.hasNext())
+        {
+            ClassMetaData cmd = (ClassMetaData)iter.next();
+            if (cmd.getPersistenceModifier() == ClassPersistenceModifier.PERSISTENCE_CAPABLE && !cmd.isAbstract() && !cmd.isEmbeddedOnly())
+            {
+                if (!storeDataMgr.managesClass(cmd.getFullClassName()))
+                {
+                    StoreData sd = storeDataMgr.get(cmd.getFullClassName());
+                    if (sd == null)
+                    {
+                        CompleteClassTable table = new CompleteClassTable(this, cmd, null);
+                        sd = newStoreData(cmd, clr);
+                        sd.setTable(table);
+                        registerStoreData(sd);
+                    }
+
+                    clsNameSet.add(cmd.getFullClassName());
+                }
+            }
+        }
     }
 }

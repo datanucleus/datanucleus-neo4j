@@ -18,17 +18,19 @@ Contributors:
 package org.datanucleus.store.neo4j.query;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
+import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.query.compiler.CompilationComponent;
 import org.datanucleus.query.compiler.QueryCompilation;
@@ -46,7 +48,7 @@ import org.datanucleus.store.neo4j.query.expression.Neo4jExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jFieldExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jLiteral;
 import org.datanucleus.store.query.Query;
-import org.datanucleus.store.schema.naming.ColumnType;
+import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCO;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.NucleusLogger;
@@ -784,10 +786,13 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         }
 
         AbstractClassMetaData cmd = candidateCmd;
+        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
         AbstractMemberMetaData embMmd = null;
 
+        List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
         boolean firstTuple = true;
         Iterator<String> iter = tuples.iterator();
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
         while (iter.hasNext())
         {
             String name = iter.next();
@@ -809,37 +814,17 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                     if (embMmd != null)
                     {
                         // Get property name for field of embedded object
-                        return Neo4jUtils.getPropertyNameForEmbeddedField(embMmd, mmd.getAbsoluteFieldNumber());
+                        embMmds.add(mmd);
+                        return table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0).getName();
+//                        return Neo4jUtils.getPropertyNameForEmbeddedField(embMmd, mmd.getAbsoluteFieldNumber());
                     }
-                    return ec.getStoreManager().getNamingFactory().getColumnName(mmd, ColumnType.COLUMN);
+                    return table.getMemberColumnMappingForMember(mmd).getColumn(0).getName();
+//                    return ec.getStoreManager().getNamingFactory().getColumnName(mmd, ColumnType.COLUMN);
                 }
                 else
                 {
-                    boolean embedded = mmd.isEmbedded();
-                    if (!embedded)
-                    {
-                        // Not explicitly marked as embedded but check whether it is defined in JDO embedded metadata
-                        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-                        if (embmd == null && embMmd != null)
-                        {
-                            embmd = embMmd.getEmbeddedMetaData();
-                        }
-                        if (embmd != null)
-                        {
-                            AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-                            if (embmmds != null)
-                            {
-                                for (int i=0;i<embmmds.length;i++)
-                                {
-                                    if (embmmds[i].getName().equals(mmd.getName()))
-                                    {
-                                        embedded = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
+                        embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
 
                     if (embedded)
                     {
@@ -854,17 +839,17 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                             {
                                 embMmd = mmd;
                             }
+                            embMmds.add(embMmd);
                         }
-                        else
+                        else if (RelationType.isRelationMultiValued(relationType))
                         {
-                            throw new NucleusUserException(
-                                "Do not support the querying of embedded collection/map/array fields : " + 
-                                mmd.getFullFieldName());
+                            throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
                         }
                     }
                     else
                     {
                         // Not embedded
+                        embMmds.clear();
                         if (relationType == RelationType.ONE_TO_MANY_UNI || relationType == RelationType.ONE_TO_MANY_BI ||
                             relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
                         {
