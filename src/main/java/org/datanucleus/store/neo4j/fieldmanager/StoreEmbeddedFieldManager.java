@@ -32,6 +32,7 @@ import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
+import org.datanucleus.util.ClassUtils;
 import org.neo4j.graphdb.PropertyContainer;
 
 /**
@@ -45,6 +46,12 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
     public StoreEmbeddedFieldManager(ObjectProvider op, PropertyContainer propObj, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
     {
         super(op, propObj, insert, table);
+        this.mmds = mmds;
+    }
+
+    public StoreEmbeddedFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, PropertyContainer propObj, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
+    {
+        super(ec, cmd, propObj, insert, table);
         this.mmds = mmds;
     }
 
@@ -98,16 +105,34 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                     // TODO Add logic for bidirectional relations so we know when to stop embedding
                 }
 
+                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>(mmds);
+                embMmds.add(mmd);
+
                 if (value == null)
                 {
-                    // TODO Delete any fields for the embedded object (see Cassandra for example)
+                    // Remove all properties for this embedded (and sub-embedded objects)
+                    int[] embMmdPosns = embCmd.getAllMemberPositions();
+                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(ec, embCmd, propObj, insert, embMmds, table);
+                    for (int i=0;i<embMmdPosns.length;i++)
+                    {
+                        AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(embMmdPosns[i]);
+                        if (String.class.isAssignableFrom(embMmd.getType()) || embMmd.getType().isPrimitive() || ClassUtils.isPrimitiveWrapperType(mmd.getTypeName()))
+                        {
+                            // Remove property for any primitive/wrapper/String fields
+                            List<AbstractMemberMetaData> colEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
+                            colEmbMmds.add(embMmd);
+                            MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(colEmbMmds);
+                            propObj.removeProperty(mapping.getColumn(0).getName());
+                        }
+                        else if (Object.class.isAssignableFrom(embMmd.getType()))
+                        {
+                            storeEmbFM.storeObjectField(embMmdPosns[i], null);
+                        }
+                    }
                     return;
                 }
                 else
                 {
-                    List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>(mmds);
-                    embMmds.add(mmd);
-
                     // Process all fields of the embedded object
                     ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
                     FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmds, table);
