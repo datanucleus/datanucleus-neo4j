@@ -47,6 +47,7 @@ import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
+import org.datanucleus.store.types.converters.MultiColumnConverter;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
@@ -301,20 +302,94 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
         }
 
-        if (mmd.getTypeConverterName() != null)
+        Object returnValue = null;
+        if (mapping.getTypeConverter() != null)
         {
-            // User-defined type converter
             TypeConverter conv = ec.getNucleusContext().getTypeManager().getTypeConverterForName(mmd.getTypeConverterName());
-            return conv.toMemberType(value);
-        }
+            if (mapping.getNumberOfColumns() > 1)
+            {
+                boolean isNull = true;
+                Object valuesArr = null;
+                Class[] colTypes = ((MultiColumnConverter)conv).getDatastoreColumnTypes();
+                if (colTypes[0] == int.class)
+                {
+                    valuesArr = new int[mapping.getNumberOfColumns()];
+                }
+                else if (colTypes[0] == long.class)
+                {
+                    valuesArr = new long[mapping.getNumberOfColumns()];
+                }
+                else if (colTypes[0] == double.class)
+                {
+                    valuesArr = new double[mapping.getNumberOfColumns()];
+                }
+                else if (colTypes[0] == float.class)
+                {
+                    valuesArr = new double[mapping.getNumberOfColumns()];
+                }
+                else if (colTypes[0] == String.class)
+                {
+                    valuesArr = new String[mapping.getNumberOfColumns()];
+                }
+                // TODO Support other types
+                else
+                {
+                    valuesArr = new Object[mapping.getNumberOfColumns()];
+                }
 
-        Object fieldValue = Neo4jUtils.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
-        if (op != null)
-        {
-            // Wrap if SCO
-            return op.wrapSCOField(mmd.getAbsoluteFieldNumber(), fieldValue, false, false, true);
+                for (int i=0;i<mapping.getNumberOfColumns();i++)
+                {
+                    String colName = mapping.getColumn(i).getName();
+                    if (propObj.hasProperty(colName))
+                    {
+                        isNull = false;
+                        Array.set(valuesArr, i, propObj.getProperty(colName));
+                    }
+                    else
+                    {
+                        Array.set(valuesArr, i, null);
+                    }
+                }
+
+                if (isNull)
+                {
+                    return null;
+                }
+
+                Object memberValue = conv.toMemberType(valuesArr);
+                if (op != null && memberValue != null)
+                {
+                    memberValue = op.wrapSCOField(fieldNumber, memberValue, false, false, true);
+                }
+                return memberValue;
+            }
+            else
+            {
+                String colName = mapping.getColumn(0).getName();
+                if (!propObj.hasProperty(colName))
+                {
+                    return null;
+                }
+                Object propVal = propObj.getProperty(colName);
+                returnValue = conv.toMemberType(propVal);
+
+                if (op != null)
+                {
+                    returnValue = op.wrapSCOField(mmd.getAbsoluteFieldNumber(), returnValue, false, false, true);
+                }
+                return returnValue;
+            }
         }
-        return fieldValue;
+        else
+        {
+            Object fieldValue = Neo4jUtils.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
+            if (op != null)
+            {
+                // Wrap if SCO
+                return op.wrapSCOField(mmd.getAbsoluteFieldNumber(), fieldValue, false, false, true);
+            }
+            return fieldValue;
+        }
     }
 
     protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType,

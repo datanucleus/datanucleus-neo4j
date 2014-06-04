@@ -40,9 +40,9 @@ import org.datanucleus.store.neo4j.Neo4jStoreManager;
 import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
-import org.datanucleus.store.types.TypeManager;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -308,26 +308,35 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         int fieldNumber = mmd.getAbsoluteFieldNumber();
         ExecutionContext ec = op.getExecutionContext();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
-        String propName = mapping.getColumn(0).getName(); // TODO Cater for multicol members
 
-        if (!insert && propObj.hasProperty(propName) && value == null)
+        if (value == null)
         {
-            // Updating the field, it had a value but this time is null, so remove it
-            propObj.removeProperty(propName);
+            if (insert)
+            {
+                // Don't store the property when null
+            }
+            else
+            {
+                // Has been set to null so remove the property
+                for (int i=0;i<mapping.getNumberOfColumns();i++)
+                {
+                    String colName = mapping.getColumn(i).getName();
+                    if (propObj.hasProperty(colName))
+                    {
+                        propObj.removeProperty(colName);
+                    }
+                }
+            }
             return;
         }
 
         if (mmd.isSerialized())
         {
-            if (value == null)
-            {
-                return;
-            }
             if (value instanceof Serializable)
             {
                 TypeConverter<Serializable, String> conv = ec.getTypeManager().getTypeConverterForType(Serializable.class, String.class);
                 String strValue = conv.toDatastoreType((Serializable) value);
-                propObj.setProperty(propName, strValue);
+                propObj.setProperty(mapping.getColumn(0).getName(), strValue);
                 return;
             }
             else
@@ -359,31 +368,38 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
             Node node = (Node)propObj;
             processMultiValuedRelationForNode(mmd, relationType, value, ec, clr, node);
-            return;
-        }
-
-        if (value == null)
-        {
-            // Don't add the property when null
-            return;
-        }
-
-        if (mmd.getTypeConverterName() != null)
-        {
-            // User-defined type converter
-            TypeManager typeMgr = ec.getNucleusContext().getTypeManager();
-            TypeConverter conv = typeMgr.getTypeConverterForName(mmd.getTypeConverterName());
-            propObj.setProperty(propName, conv.toDatastoreType(value));
         }
         else
         {
-            Object storedValue = Neo4jUtils.getStoredValueForField(ec, mmd, value, FieldRole.ROLE_FIELD);
-            if (storedValue != null)
+            if (mapping.getTypeConverter() != null)
             {
-                // Neo4j doesn't allow null values
-                propObj.setProperty(propName, storedValue);
+                // Persist using the provided converter
+                Object datastoreValue = mapping.getTypeConverter().toDatastoreType(value);
+                if (mapping.getNumberOfColumns() > 1)
+                {
+                    for (int i=0;i<mapping.getNumberOfColumns();i++)
+                    {
+                        // TODO Persist as the correct column type since the typeConverter type may not be directly persistable
+                        Object colValue = Array.get(datastoreValue, i);
+                        propObj.setProperty(mapping.getColumn(i).getName(), colValue);
+                    }
+                }
+                else
+                {
+                    propObj.setProperty(mapping.getColumn(0).getName(), datastoreValue);
+                }
+            }
+            else
+            {
+                Object storedValue = Neo4jUtils.getStoredValueForField(ec, mmd, value, FieldRole.ROLE_FIELD);
+                if (storedValue != null)
+                {
+                    // Neo4j doesn't allow null values
+                    propObj.setProperty(mapping.getColumn(0).getName(), storedValue);
+                }
             }
         }
+
         op.wrapSCOField(fieldNumber, value, false, false, true);
     }
 
