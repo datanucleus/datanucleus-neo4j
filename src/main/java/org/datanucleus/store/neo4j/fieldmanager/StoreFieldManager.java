@@ -57,9 +57,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     /** Node/Relationship that we are populating with properties representing the fields of the POJO. */
     protected PropertyContainer propObj;
 
-    /** Metadata of the owner field if this is for an embedded object. */
-    protected AbstractMemberMetaData ownerMmd = null;
-
     public StoreFieldManager(ObjectProvider op, PropertyContainer propObj, boolean insert, Table table)
     {
         super(op, insert);
@@ -219,38 +216,13 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
-        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, ownerMmd))
+        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
         {
             // Embedded Field
             if (RelationType.isRelationSingleValued(relationType))
             {
                 // Embedded PC object
                 // TODO Cater for nulled embedded object on update
-                if (ownerMmd != null)
-                {
-                    // Detect bidirectional relation so we know when to stop embedding
-                    if (RelationType.isBidirectional(relationType))
-                    {
-                        // Field has mapped-by, so just use that
-                        if ((ownerMmd.getMappedBy() != null && mmd.getName().equals(ownerMmd.getMappedBy())) ||
-                            (mmd.getMappedBy() != null && ownerMmd.getName().equals(mmd.getMappedBy())))
-                        {
-                            // This is other side of owner bidirectional, so omit
-                            return;
-                        }
-                    }
-                    else 
-                    {
-                        // mapped-by not set but could have owner-field
-                        if (ownerMmd.getEmbeddedMetaData() != null &&
-                            ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
-                            ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
-                        {
-                            // This is the owner-field linking back to the owning object so stop
-                            return;
-                        }
-                    }
-                }
 
                 List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
                 embMmds.add(mmd);

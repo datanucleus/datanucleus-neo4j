@@ -18,11 +18,12 @@ Contributors:
 package org.datanucleus.store.neo4j.query;
 
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
@@ -91,7 +92,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
     boolean precompilable = true;
 
     /** Stack of neo4j expressions, used for forming the Cypher query component(s). */
-    Stack<Neo4jExpression> stack = new Stack();
+    Deque<Neo4jExpression> stack = new ArrayDeque<Neo4jExpression>();
 
     public QueryToCypherMapper(QueryCompilation compilation, Map parameters, AbstractClassMetaData cmd,
             ExecutionContext ec, Query q)

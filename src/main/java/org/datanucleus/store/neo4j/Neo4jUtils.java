@@ -159,7 +159,7 @@ public class Neo4jUtils
             }
         }
 
-        StringBuffer cypherString = new StringBuffer();
+        StringBuilder cypherString = new StringBuilder();
 
         // Start from the nodes/relationship of the required type
         cypherString.append("START pc=" + 
@@ -343,7 +343,7 @@ public class Neo4jUtils
         }
         StoreManager storeMgr = ec.getStoreManager();
 
-        StringBuffer cypherString = new StringBuffer();
+        StringBuilder cypherString = new StringBuilder();
 
         // Start from the nodes of the required type
         String indexClassName = cmd.getFullClassName();
@@ -748,7 +748,7 @@ public class Neo4jUtils
         if (mmd != null && mmd.hasCollection() && fieldRole == FieldRole.ROLE_FIELD)
         {
             Collection rawColl = (Collection)value;
-            if (rawColl.size() == 0)
+            if (rawColl.isEmpty())
             {
                 return null;
             }

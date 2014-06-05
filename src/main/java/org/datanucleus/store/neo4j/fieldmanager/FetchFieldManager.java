@@ -65,9 +65,6 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
     boolean embedded = false;
 
-    /** Metadata for the owner field if this is embedded. */
-    protected AbstractMemberMetaData ownerMmd = null;
-
     public FetchFieldManager(ObjectProvider op, PropertyContainer node, Table table)
     {
         super(op);
@@ -194,39 +191,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         RelationType relationType = mmd.getRelationType(clr);
         if (relationType != RelationType.NONE)
         {
-            if (MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, ownerMmd))
+            if (MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
             {
                 // Embedded field
                 if (RelationType.isRelationSingleValued(relationType))
                 {
                     // Embedded PC object
-                    if (ownerMmd != null)
-                    {
-                        // Detect bidirectional relation so we know when to stop embedding
-                        if (RelationType.isBidirectional(relationType))
-                        {
-                            if ((ownerMmd.getMappedBy() != null && mmd.getName().equals(ownerMmd.getMappedBy())) ||
-                                    (mmd.getMappedBy() != null && ownerMmd.getName().equals(mmd.getMappedBy())))
-                            {
-                                // Other side of owner bidirectional, so return the owner
-                                ObjectProvider[] ownerOps = op.getEmbeddedOwners();
-                                return (ownerOps != null && ownerOps.length > 0 ? ownerOps[0].getObject() : null);
-                            }
-                        }
-                        else
-                        {
-                            // mapped-by not set but could have owner-field
-                            if (ownerMmd.getEmbeddedMetaData() != null &&
-                                ownerMmd.getEmbeddedMetaData().getOwnerMember() != null &&
-                                ownerMmd.getEmbeddedMetaData().getOwnerMember().equals(mmd.getName()))
-                            {
-                                // This is the owner-field linking back to the owning object so return the owner
-                                ObjectProvider[] ownerOps = op.getEmbeddedOwners();
-                                return (ownerOps != null && ownerOps.length > 0 ? ownerOps[0].getObject() : null);
-                            }
-                        }
-                    }
-
                     AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
                     if (embcmd == null)
                     {
