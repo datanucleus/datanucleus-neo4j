@@ -190,7 +190,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
 
             try
             {
-                StringBuffer orderStr = new StringBuffer();
+                StringBuilder orderStr = new StringBuilder();
                 Expression[] orderingExpr = compilation.getExprOrdering();
                 for (int i=0;i<orderingExpr.length;i++)
                 {
@@ -235,7 +235,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
 
             // Select any result expressions
             resultComplete = true;
-            StringBuffer str = new StringBuffer();
+            StringBuilder str = new StringBuilder();
             try
             {
                 Expression[] resultExprs = compilation.getExprResult();
