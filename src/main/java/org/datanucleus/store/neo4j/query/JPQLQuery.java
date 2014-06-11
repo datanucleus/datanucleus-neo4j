@@ -45,6 +45,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
  */
 public class JPQLQuery extends AbstractJPQLQuery
 {
+    private static final long serialVersionUID = -38470786707194010L;
     /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient Neo4jQueryCompilation datastoreCompilation = null;
 

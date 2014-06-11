@@ -46,6 +46,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
  */
 public class JDOQLQuery extends AbstractJDOQLQuery
 {
+    private static final long serialVersionUID = -360869109260191024L;
     /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient Neo4jQueryCompilation datastoreCompilation = null;
 
