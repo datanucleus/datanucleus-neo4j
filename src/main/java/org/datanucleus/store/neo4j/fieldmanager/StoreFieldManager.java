@@ -311,10 +311,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 propObj.setProperty(mapping.getColumn(0).getName(), strValue);
                 return;
             }
-            else
-            {
-                throw new NucleusUserException("Field " + mmd.getFullFieldName() + " is marked as serialised, but value is not Serializable");
-            }
+
+            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " is marked as serialised, but value is not Serializable");
         }
 
         if (RelationType.isRelationSingleValued(relationType))
@@ -406,11 +404,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                             hasRelation = true;
                             break;
                         }
-                        else
-                        {
-                            // Remove old Relationship TODO Cascade delete?
-                            rel.delete();
-                        }
+
+                        // Remove old Relationship TODO Cascade delete?
+                        rel.delete();
                     }
                 }
             }

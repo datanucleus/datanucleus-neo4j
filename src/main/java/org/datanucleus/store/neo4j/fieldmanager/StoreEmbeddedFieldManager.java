@@ -131,14 +131,12 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                     }
                     return;
                 }
-                else
-                {
-                    // Process all fields of the embedded object
-                    ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
-                    FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmds, table);
-                    embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
-                    return;
-                }
+
+                // Process all fields of the embedded object
+                ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
+                FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmds, table);
+                embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
+                return;
             }
         }
 

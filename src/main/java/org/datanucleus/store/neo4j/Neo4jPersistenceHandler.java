@@ -430,10 +430,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                     throw new NucleusOptimisticException("Object with id " + op.getInternalObjectId() + 
                         " and version " + op.getTransactionalVersion() + " no longer present");
                 }
-                else
-                {
-                    throw new NucleusDataStoreException("Could not find object with id " + op.getInternalObjectId());
-                }
+                throw new NucleusDataStoreException("Could not find object with id " + op.getInternalObjectId());
             }
 
             int[] updatedFieldNums = fieldNumbers;

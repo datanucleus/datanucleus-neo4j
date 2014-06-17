@@ -32,7 +32,6 @@ import org.datanucleus.store.connection.AbstractConnectionFactory;
 import org.datanucleus.store.connection.AbstractEmulatedXAResource;
 import org.datanucleus.store.connection.AbstractManagedConnection;
 import org.datanucleus.store.connection.ManagedConnection;
-import org.datanucleus.store.connection.ManagedConnectionResourceListener;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -207,7 +206,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             // Notify anything using this connection to use it now
             for (int i=0; i<listeners.size(); i++)
             {
-                ((ManagedConnectionResourceListener)listeners.get(i)).managedConnectionPreClose();
+                listeners.get(i).managedConnectionPreClose();
             }
 
             if (graphTx != null)
@@ -224,7 +223,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             // Remove the connection from pooling
             for (int i=0; i<listeners.size(); i++)
             {
-                ((ManagedConnectionResourceListener)listeners.get(i)).managedConnectionPostClose();
+                listeners.get(i).managedConnectionPostClose();
             }
 
             conn = null;

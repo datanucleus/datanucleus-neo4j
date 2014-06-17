@@ -820,62 +820,54 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                     }
                     return table.getMemberColumnMappingForMember(mmd).getColumn(0).getName();
                 }
-                else
-                {
-                    boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
-                        embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
 
-                    if (embedded)
+                boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
+                    embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
+
+                if (embedded)
+                {
+                    if (RelationType.isRelationSingleValued(relationType))
                     {
-                        if (RelationType.isRelationSingleValued(relationType))
+                        cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
+                        if (embMmd != null)
                         {
-                            cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
-                            if (embMmd != null)
-                            {
-                                embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
-                            }
-                            else
-                            {
-                                embMmd = mmd;
-                            }
-                            embMmds.add(embMmd);
-                        }
-                        else if (RelationType.isRelationMultiValued(relationType))
-                        {
-                            throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
-                        }
-                    }
-                    else
-                    {
-                        // Not embedded
-                        embMmds.clear();
-                        if (relationType == RelationType.ONE_TO_MANY_UNI || relationType == RelationType.ONE_TO_MANY_BI ||
-                            relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
-                        {
-                            if (!iter.hasNext())
-                            {
-                                return name;
-                            }
-                            else
-                            {
-                                // Need join to another object, not currently supported
-                                throw new NucleusUserException("Do not support query joining to related object at " + 
-                                        mmd.getFullFieldName() + " in " + StringUtils.collectionToString(tuples));
-                            }
+                            embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
                         }
                         else
                         {
-                            if (compileComponent == CompilationComponent.FILTER)
-                            {
-                                filterComplete = false;
-                            }
-
-                            NucleusLogger.QUERY.debug("Query has reference to " + 
-                                    StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
-                                    " is not persisted into this object, so unexecutable in the datastore");
-                            return null;
+                            embMmd = mmd;
                         }
+                        embMmds.add(embMmd);
                     }
+                    else if (RelationType.isRelationMultiValued(relationType))
+                    {
+                        throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
+                    }
+                }
+                else
+                {
+                    // Not embedded
+                    embMmds.clear();
+                    if (relationType == RelationType.ONE_TO_MANY_UNI || relationType == RelationType.ONE_TO_MANY_BI ||
+                            relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
+                    {
+                        if (!iter.hasNext())
+                        {
+                            return name;
+                        }
+                        // Need join to another object, not currently supported
+                        throw new NucleusUserException("Do not support query joining to related object at " + 
+                                mmd.getFullFieldName() + " in " + StringUtils.collectionToString(tuples));
+                    }
+
+                    if (compileComponent == CompilationComponent.FILTER)
+                    {
+                        filterComplete = false;
+                    }
+
+                    NucleusLogger.QUERY.debug("Query has reference to " + StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
+                            " is not persisted into this object, so unexecutable in the datastore");
+                    return null;
                 }
                 firstTuple = false;
             }

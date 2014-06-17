@@ -265,11 +265,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 TypeConverter<Serializable, String> conv = ec.getTypeManager().getTypeConverterForType(Serializable.class, String.class);
                 return conv.toMemberType((String) value);
             }
-            else
-            {
-                throw new NucleusUserException("Field " + mmd.getFullFieldName() + " has a serialised value," +
+
+            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " has a serialised value," +
                     " but we only support String serialisation and is " + value.getClass().getName());
-            }
         }
 
         Object returnValue = null;
@@ -333,33 +331,29 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 }
                 return memberValue;
             }
-            else
-            {
-                String colName = mapping.getColumn(0).getName();
-                if (!propObj.hasProperty(colName))
-                {
-                    return null;
-                }
-                Object propVal = propObj.getProperty(colName);
-                returnValue = conv.toMemberType(propVal);
 
-                if (op != null)
-                {
-                    returnValue = op.wrapSCOField(mmd.getAbsoluteFieldNumber(), returnValue, false, false, true);
-                }
-                return returnValue;
+            String colName = mapping.getColumn(0).getName();
+            if (!propObj.hasProperty(colName))
+            {
+                return null;
             }
-        }
-        else
-        {
-            Object fieldValue = Neo4jUtils.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
+            Object propVal = propObj.getProperty(colName);
+            returnValue = conv.toMemberType(propVal);
+
             if (op != null)
             {
-                // Wrap if SCO
-                return op.wrapSCOField(mmd.getAbsoluteFieldNumber(), fieldValue, false, false, true);
+                returnValue = op.wrapSCOField(mmd.getAbsoluteFieldNumber(), returnValue, false, false, true);
             }
-            return fieldValue;
+            return returnValue;
         }
+
+        Object fieldValue = Neo4jUtils.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
+        if (op != null)
+        {
+            // Wrap if SCO
+            return op.wrapSCOField(mmd.getAbsoluteFieldNumber(), fieldValue, false, false, true);
+        }
+        return fieldValue;
     }
 
     protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType,

@@ -135,10 +135,8 @@ public class Neo4jUtils
                     }
                     return (attributedRelation ? graphDB.getRelationshipById(key) : graphDB.getNodeById(key));
                 }
-                else
-                {
-                    // TODO Composite id using identity on one field?
-                }
+
+                // TODO Composite id using identity on one field?
             }
         }
 
@@ -968,10 +966,7 @@ public class Neo4jUtils
             {
                 return type.getEnumConstants()[((Number)value).intValue()];
             }
-            else
-            {
-                return Enum.valueOf(type, (String)value);
-            }
+            return Enum.valueOf(type, (String)value);
         }
 
         TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(type, String.class);
@@ -1052,14 +1047,12 @@ public class Neo4jUtils
             PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectId(db, ec, rootCmd, id);
             if (propObj instanceof Node)
             {
-                AbstractClassMetaData cmd = getClassMetaDataForPropertyContainer((Node)propObj, ec, rootCmd);
+                AbstractClassMetaData cmd = getClassMetaDataForPropertyContainer(propObj, ec, rootCmd);
                 return cmd.getFullClassName();
             }
-            else
-            {
-                // Don't support polymorphism in objects persisted as Relationship TODO Allow this?
-                return rootCmd.getFullClassName();
-            }
+
+            // Don't support polymorphism in objects persisted as Relationship TODO Allow this?
+            return rootCmd.getFullClassName();
         }
         finally
         {
