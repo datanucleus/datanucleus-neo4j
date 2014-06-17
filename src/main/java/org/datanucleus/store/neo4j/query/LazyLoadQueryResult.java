@@ -18,7 +18,6 @@ Contributors:
 package org.datanucleus.store.neo4j.query;
 
 import java.io.ObjectStreamException;
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,7 +50,7 @@ import org.neo4j.graphdb.PropertyContainer;
  * 
  * TODO Support fetching objects in batches
  */
-public class LazyLoadQueryResult extends AbstractQueryResult implements Serializable
+public class LazyLoadQueryResult extends AbstractQueryResult
 {
     protected ExecutionContext ec;
 
