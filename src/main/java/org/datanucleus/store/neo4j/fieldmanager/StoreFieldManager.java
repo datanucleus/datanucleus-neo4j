@@ -34,6 +34,7 @@ import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.store.exceptions.ReachableObjectNotCascadedException;
 import org.datanucleus.store.fieldmanager.AbstractStoreFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.Neo4jStoreManager;
@@ -42,7 +43,8 @@ import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
-
+import org.datanucleus.util.Localiser;
+import org.datanucleus.util.NucleusLogger;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -222,6 +224,19 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (RelationType.isRelationSingleValued(relationType))
             {
                 // Embedded PC object
+                if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
+                {
+                    if (!ec.getApiAdapter().isDetached(value) && !ec.getApiAdapter().isPersistent(value))
+                    {
+                        // Related PC object not persistent, but cant do cascade-persist so throw exception
+                        if (NucleusLogger.PERSISTENCE.isDebugEnabled())
+                        {
+                            NucleusLogger.PERSISTENCE.debug(Localiser.msg("007006", mmd.getFullFieldName()));
+                        }
+                        throw new ReachableObjectNotCascadedException(mmd.getFullFieldName(), value);
+                    }
+                }
+
                 // TODO Cater for nulled embedded object on update
 
                 List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
@@ -376,6 +391,19 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     protected void processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value,
             ExecutionContext ec, ClassLoaderResolver clr, Node node)
     {
+        if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
+        {
+            if (!ec.getApiAdapter().isDetached(value) && !ec.getApiAdapter().isPersistent(value))
+            {
+                // Related PC object not persistent, but cant do cascade-persist so throw exception
+                if (NucleusLogger.PERSISTENCE.isDebugEnabled())
+                {
+                    NucleusLogger.PERSISTENCE.debug(Localiser.msg("007006", mmd.getFullFieldName()));
+                }
+                throw new ReachableObjectNotCascadedException(mmd.getFullFieldName(), value);
+            }
+        }
+
         // 1-1/N-1 Make sure it is persisted and form the relation
         Object valuePC = (value != null ? ec.persistObjectInternal(value, null, -1, -1) : null);
         ObjectProvider relatedOP = (value != null ? ec.findObjectProvider(valuePC) : null);
@@ -431,6 +459,25 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         if (mmd.hasCollection())
         {
             Collection coll = (Collection)value;
+            if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
+            {
+                // Field doesnt support cascade-persist so no reachability
+                if (NucleusLogger.PERSISTENCE.isDebugEnabled())
+                {
+                    NucleusLogger.PERSISTENCE.debug(Localiser.msg("007006", mmd.getFullFieldName()));
+                }
+
+                // Check for any persistable elements that aren't persistent
+                for (Object element : coll)
+                {
+                    if (!ec.getApiAdapter().isDetached(element) && !ec.getApiAdapter().isPersistent(element))
+                    {
+                        // Element is not persistent so throw exception
+                        throw new ReachableObjectNotCascadedException(mmd.getFullFieldName(), element);
+                    }
+                }
+            }
+
             List<Node> relNodes = new ArrayList<Node>();
             if (value != null)
             {
