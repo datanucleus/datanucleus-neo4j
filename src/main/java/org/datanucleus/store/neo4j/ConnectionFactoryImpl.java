@@ -89,6 +89,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         String propsFileName = storeMgr.getStringProperty("datanucleus.ConnectionPropertiesFile");
         if (StringUtils.isWhitespace(propsFileName))
         {
+            NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB with name " + dbName);
             graphDB = factory.newEmbeddedDatabase(dbName);
         }
         else
@@ -96,11 +97,12 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             File propsFile = new File(propsFileName);
             if (!propsFile.exists())
             {
-                NucleusLogger.CONNECTION.warn("Connection properties file " + propsFileName + " doesn't exist! Ignoring and creating database using defaults");
+                NucleusLogger.CONNECTION.debug("Connection properties file " + propsFileName + " doesn't exist! Starting Neo4j Embedded GraphDB using defaults");
                 graphDB = factory.newEmbeddedDatabase(dbName);
             }
             else
             {
+                NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB using properties from file " + propsFileName);
                 graphDB = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(dbName).loadPropertiesFromFile(propsFileName).newGraphDatabase();
             }
         }
@@ -110,6 +112,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             @Override
             public void run()
             {
+                NucleusLogger.CONNECTION.debug("Shutting down Neo4j Embedded GraphDB via shutdown hook");
                 graphDB.shutdown();
             }
         });
@@ -117,6 +120,11 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
 
     public void close()
     {
+        if (graphDB != null)
+        {
+            NucleusLogger.CONNECTION.debug("Shutting down Neo4j Embedded GraphDB at close of StoreManager");
+            graphDB.shutdown();
+        }
         super.close();
     }
 
