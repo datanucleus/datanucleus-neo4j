@@ -87,24 +87,32 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
 
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         String propsFileName = storeMgr.getStringProperty("datanucleus.ConnectionPropertiesFile");
-        if (StringUtils.isWhitespace(propsFileName))
+        try
         {
-            NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB with name " + dbName);
-            graphDB = factory.newEmbeddedDatabase(dbName);
-        }
-        else
-        {
-            File propsFile = new File(propsFileName);
-            if (!propsFile.exists())
+            if (StringUtils.isWhitespace(propsFileName))
             {
-                NucleusLogger.CONNECTION.debug("Connection properties file " + propsFileName + " doesn't exist! Starting Neo4j Embedded GraphDB using defaults");
+                NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB with name " + dbName);
                 graphDB = factory.newEmbeddedDatabase(dbName);
             }
             else
             {
-                NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB using properties from file " + propsFileName);
-                graphDB = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(dbName).loadPropertiesFromFile(propsFileName).newGraphDatabase();
+                File propsFile = new File(propsFileName);
+                if (!propsFile.exists())
+                {
+                    NucleusLogger.CONNECTION.debug("Connection properties file " + propsFileName + " doesn't exist! Starting Neo4j Embedded GraphDB using defaults");
+                    graphDB = factory.newEmbeddedDatabase(dbName);
+                }
+                else
+                {
+                    NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB using properties from file " + propsFileName);
+                    graphDB = factory.newEmbeddedDatabaseBuilder(dbName).loadPropertiesFromFile(propsFileName).newGraphDatabase();
+                }
             }
+        }
+        catch (Exception e)
+        {
+            NucleusLogger.CONNECTION.error("Exception was thrown when connecting to Neo4j embedded database", e);
+            throw e;
         }
 
         Runtime.getRuntime().addShutdownHook(new Thread()
@@ -195,7 +203,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
                 {
                     NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " is committing");
                     graphTx.success();
-                    graphTx.finish();
+                    graphTx.close();
                     graphTx = null;
                     xaRes = null;
                     NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " committed connection");
@@ -222,7 +230,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
                 // End the current request
                 NucleusLogger.CONNECTION.debug("ManagedConnection " + this.toString() + " is committing");
                 graphTx.success();
-                graphTx.finish();
+                graphTx.close();
                 graphTx = null;
                 xaRes = null;
                 NucleusLogger.CONNECTION.debug("ManagedConnection " + this.toString() + " committed connection");
@@ -270,7 +278,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         {
             super.commit(xid, onePhase);
             graphTx.success();
-            graphTx.finish();
+            graphTx.close();
             ((ManagedConnectionImpl)mconn).graphTx = null;
             ((ManagedConnectionImpl)mconn).xaRes = null;
         }
@@ -279,7 +287,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         {
             super.rollback(xid);
             graphTx.failure();
-            graphTx.finish();
+            graphTx.close();
             ((ManagedConnectionImpl)mconn).graphTx = null;
             ((ManagedConnectionImpl)mconn).xaRes = null;
         }

@@ -17,8 +17,8 @@
     </description>
 
     <properties>
-        <dn.core.version>4.0.0-m4</dn.core.version>
-        <neo4j.version>1.9.4</neo4j.version>
+        <dn.core.version>4.0.0-release</dn.core.version>
+        <neo4j.version>2.1.3</neo4j.version>
     </properties>
 
     <scm>
