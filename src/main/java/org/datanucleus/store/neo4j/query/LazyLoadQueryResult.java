@@ -151,10 +151,8 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         {
             // Candidate result
             PropertyContainer node = (PropertyContainer) map.get(candidateAliasName);
-            AbstractClassMetaData propObjCmd = 
-                Neo4jUtils.getClassMetaDataForPropertyContainer(node, query.getExecutionContext(), cmd);
-            result = Neo4jUtils.getObjectForPropertyContainer(node, propObjCmd, query.getExecutionContext(), 
-                query.getIgnoreCache());
+            AbstractClassMetaData propObjCmd = Neo4jUtils.getClassMetaDataForPropertyContainer(node, query.getExecutionContext(), cmd);
+            result = Neo4jUtils.getObjectForPropertyContainer(node, propObjCmd, query.getExecutionContext(), query.getIgnoreCache());
         }
         else
         {
@@ -184,7 +182,6 @@ public class LazyLoadQueryResult extends AbstractQueryResult
     {
         itemsByIndex.clear();
         itemsByIndex = null;
-
         result = null;
 
         super.close();

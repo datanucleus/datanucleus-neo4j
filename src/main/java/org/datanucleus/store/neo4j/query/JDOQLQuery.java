@@ -47,6 +47,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 public class JDOQLQuery extends AbstractJDOQLQuery
 {
     private static final long serialVersionUID = -360869109260191024L;
+
     /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient Neo4jQueryCompilation datastoreCompilation = null;
 
@@ -183,8 +184,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         if (useCaching())
         {
             // Allowing caching so try to find compiled (datastore) query
-            datastoreCompilation = (Neo4jQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey,
-                getLanguage(), cacheKey);
+            datastoreCompilation = (Neo4jQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey, getLanguage(), cacheKey);
             if (datastoreCompilation != null)
             {
                 // Cached compilation exists for this datastore so reuse it
@@ -251,10 +251,8 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 }
                 else
                 {
-                    AbstractClassMetaData cmd =
-                        ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
-                    String cypherText = Neo4jUtils.getCypherTextForQuery(ec, cmd, compilation.getCandidateAlias(), 
-                        subclasses, null, null, null, null, null);
+                    AbstractClassMetaData cmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
+                    String cypherText = Neo4jUtils.getCypherTextForQuery(ec, cmd, compilation.getCandidateAlias(), subclasses, null, null, null, null, null);
                     candidates = Neo4jUtils.executeCypherQuery(this, db, cypherText, cmd);
                 }
             }
@@ -277,8 +275,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 }
                 else
                 {
-                    AbstractClassMetaData cmd =
-                        ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
+                    AbstractClassMetaData cmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
                     String cypherText = datastoreCompilation.getCypherText();
                     candidates = Neo4jUtils.executeCypherQuery(this, db, cypherText, cmd);
                 }
@@ -294,16 +291,14 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 }
 
                 // Evaluate result/filter/grouping/having/ordering in-memory
-                JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, results, compilation,
-                    parameters, ec.getClassLoaderResolver());
+                JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, results, compilation, parameters, ec.getClassLoaderResolver());
                 // TODO Support resultClass
                 results = resultMapper.execute(filterInMemory, orderInMemory, resultInMemory, true, rangeInMemory);
             }
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", 
-                    "" + (System.currentTimeMillis() - startTime)));
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", "" + (System.currentTimeMillis() - startTime)));
             }
 
             if (type == BULK_DELETE)
@@ -327,8 +322,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             {
                 final QueryResult qr1 = (QueryResult)results;
                 final ManagedConnection mconn1 = mconn;
-                ManagedConnectionResourceListener listener =
-                    new ManagedConnectionResourceListener()
+                ManagedConnectionResourceListener listener = new ManagedConnectionResourceListener()
                 {
                     public void transactionFlushed(){}
                     public void transactionPreClose()

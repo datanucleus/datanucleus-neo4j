@@ -27,6 +27,7 @@ Contributors:
     <extension point="org.datanucleus.store_query_query">
         <query class-name="org.datanucleus.store.neo4j.query.JDOQLQuery" datastore="neo4j" name="JDOQL"/>
         <query class-name="org.datanucleus.store.neo4j.query.JPQLQuery" datastore="neo4j" name="JPQL"/>
+        <query class-name="org.datanucleus.store.neo4j.query.CypherQuery" datastore="neo4j" name="Cypher"/>
     </extension>
 
     <!-- CONNECTION FACTORY -->

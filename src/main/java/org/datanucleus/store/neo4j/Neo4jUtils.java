@@ -261,8 +261,7 @@ public class Neo4jUtils
         PropertyContainer propObj = (PropertyContainer)map.get("pc");
         if (iter.hasNext())
         {
-            throw new NucleusException("Query of Node/Relationship for object with id=" + id + 
-                " returned more than 1 result! : " + cypherString);
+            throw new NucleusException("Query of Node/Relationship for object with id=" + id + " returned more than 1 result! : " + cypherString);
         }
         return propObj;
     }
@@ -276,13 +275,11 @@ public class Neo4jUtils
      * @return List of results. If a result clause is provided then returns List&lt;Object&gt; or List&lt;Object[]&gt;
      *     and otherwise returns List&lt;candidate&gt;
      */
-    public static List executeCypherQuery(Query query, GraphDatabaseService db, String cypherText,
-            AbstractClassMetaData candidateCmd)
+    public static List executeCypherQuery(Query query, GraphDatabaseService db, String cypherText, AbstractClassMetaData candidateCmd)
     {
         if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
         {
-            NucleusLogger.DATASTORE_NATIVE.debug("Retrieving objects of type " + candidateCmd.getFullClassName() + 
-                " using Cypher query : " + cypherText);
+            NucleusLogger.DATASTORE_NATIVE.debug("Retrieving objects of type " + candidateCmd.getFullClassName() + " using Cypher query : " + cypherText);
         }
 
         // Extract the result from the Cypher text
@@ -452,8 +449,7 @@ public class Neo4jUtils
      * @param cmd Root metadata
      * @return AbstractClassMetaData for the type that this Node/Relationship is an instance of.
      */
-    public static AbstractClassMetaData getClassMetaDataForPropertyContainer(PropertyContainer propObj,
-            ExecutionContext ec, AbstractClassMetaData cmd)
+    public static AbstractClassMetaData getClassMetaDataForPropertyContainer(PropertyContainer propObj, ExecutionContext ec, AbstractClassMetaData cmd)
     {
         // Assumed to be of the root type, but check all subclasses
         boolean attributedRelation = Neo4jUtils.classIsAttributedRelation(cmd);
@@ -545,8 +541,7 @@ public class Neo4jUtils
     {
         Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
         final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
-        Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, 
-            false, fm);
+        Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, fm);
 
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
@@ -635,8 +630,7 @@ public class Neo4jUtils
                 if (vermd.getFieldName() != null)
                 {
                     // Get the version from the field value
-                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                    version = op.provideField(verMmd.getAbsoluteFieldNumber());
+                    version = op.provideField(cmd.getMetaDataForMember(vermd.getFieldName()).getAbsoluteFieldNumber());
                 }
                 else
                 {
@@ -1047,8 +1041,7 @@ public class Neo4jUtils
             PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectId(db, ec, rootCmd, id);
             if (propObj instanceof Node)
             {
-                AbstractClassMetaData cmd = getClassMetaDataForPropertyContainer(propObj, ec, rootCmd);
-                return cmd.getFullClassName();
+                return getClassMetaDataForPropertyContainer(propObj, ec, rootCmd).getFullClassName();
             }
 
             // Don't support polymorphism in objects persisted as Relationship TODO Allow this?
