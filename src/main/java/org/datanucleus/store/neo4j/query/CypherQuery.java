@@ -102,14 +102,14 @@ public class CypherQuery extends AbstractJavaQuery
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021046", "JDOQL", getSingleStringQuery(), null));
+                NucleusLogger.QUERY.debug(Localiser.msg("021046", "Cypher", getSingleStringQuery(), null));
             }
 
             results = Neo4jUtils.executeCypherQuery(this, db, cypher, null);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JDOQL", "" + (System.currentTimeMillis() - startTime)));
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", "Cypher", "" + (System.currentTimeMillis() - startTime)));
             }
 
             return results;
