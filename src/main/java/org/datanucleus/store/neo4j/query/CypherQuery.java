@@ -24,9 +24,11 @@ import java.util.Map;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.query.AbstractJavaQuery;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 /**
  * Cypher query for Neo4j. Allows the user to execute a Cypher query and return the results in the form "List&lt;Object[]&gt;".
@@ -95,7 +97,7 @@ public class CypherQuery extends AbstractJavaQuery
         List results = new ArrayList();
         try
         {
-//            GraphDatabaseService db = (GraphDatabaseService) mconn.getConnection();
+            GraphDatabaseService db = (GraphDatabaseService) mconn.getConnection();
 
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.QUERY.isDebugEnabled())
@@ -103,7 +105,7 @@ public class CypherQuery extends AbstractJavaQuery
                 NucleusLogger.QUERY.debug(Localiser.msg("021046", "JDOQL", getSingleStringQuery(), null));
             }
 
-            // TODO Execute Cypher query
+            results = Neo4jUtils.executeCypherQuery(this, db, cypher, null);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {

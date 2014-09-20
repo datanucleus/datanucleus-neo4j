@@ -77,7 +77,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         this.resultIterator = result.iterator();
         this.cypherResults = (cypherResult != null ? cypherResult.split(",") : null);
 
-        if (cypherResults == null || cypherResults[0].equals(candidateAliasName))
+        if (cypherResults == null || (candidateAliasName != null && cypherResults[0].equals(candidateAliasName)))
         {
             resultSizeMethod = "count";
         }
@@ -147,7 +147,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
     private Object getResultFromMapRow(Map<String, Object> map)
     {
         Object result = null;
-        if (cypherResults == null || cypherResults[0].equals(candidateAliasName))
+        if (cypherResults == null || (candidateAliasName != null && cypherResults[0].equals(candidateAliasName)))
         {
             // Candidate result
             PropertyContainer node = (PropertyContainer) map.get(candidateAliasName);

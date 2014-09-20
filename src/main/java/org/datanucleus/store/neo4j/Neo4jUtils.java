@@ -279,7 +279,14 @@ public class Neo4jUtils
     {
         if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
         {
-            NucleusLogger.DATASTORE_NATIVE.debug("Retrieving objects of type " + candidateCmd.getFullClassName() + " using Cypher query : " + cypherText);
+            if (candidateCmd != null)
+            {
+                NucleusLogger.DATASTORE_NATIVE.debug("Retrieving objects of type " + candidateCmd.getFullClassName() + " using Cypher query : " + cypherText);
+            }
+            else
+            {
+                NucleusLogger.DATASTORE_NATIVE.debug("Retrieving objects using Cypher query : " + cypherText);
+            }
         }
 
         // Extract the result from the Cypher text
