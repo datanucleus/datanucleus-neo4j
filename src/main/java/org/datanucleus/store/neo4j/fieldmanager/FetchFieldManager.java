@@ -70,7 +70,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         super(op);
         this.table = table;
         this.propObj = node;
-        if (op.getEmbeddedOwners() != null)
+        if (ec.getOwnersForEmbeddedObjectProvider(op) != null)
         {
             embedded = true;
         }
