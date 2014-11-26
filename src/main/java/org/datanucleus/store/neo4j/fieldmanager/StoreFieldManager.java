@@ -41,6 +41,7 @@ import org.datanucleus.store.neo4j.Neo4jStoreManager;
 import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
+import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.Localiser;
@@ -385,7 +386,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
         }
 
-        op.wrapSCOField(fieldNumber, value, false, false, true);
+        SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
     }
 
     protected void processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value,
