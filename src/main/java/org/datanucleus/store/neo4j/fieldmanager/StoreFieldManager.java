@@ -386,7 +386,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
         }
 
-        SCOUtils.wrapSCOField(op, fieldNumber, value, false, false, true);
+        SCOUtils.wrapSCOField(op, fieldNumber, value, true);
     }
 
     protected void processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value,
