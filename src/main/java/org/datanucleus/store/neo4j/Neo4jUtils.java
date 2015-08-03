@@ -43,6 +43,7 @@ import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.FieldValues;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.fieldmanager.FieldManager;
@@ -108,7 +109,14 @@ public class Neo4jUtils
             AbstractClassMetaData cmd, Object id)
     {
         StoreManager storeMgr = ec.getStoreManager();
-        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
+        {
+            storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        }
+        Table table = sd.getTable();
+
 
         boolean attributedRelation = Neo4jUtils.classIsAttributedRelation(cmd);
         if (cmd.pkIsDatastoreAttributed(storeMgr))
@@ -337,7 +345,14 @@ public class Neo4jUtils
     public static String getCypherTextForQuery(ExecutionContext ec, AbstractClassMetaData cmd, String candidateAlias,
             boolean subclasses, String filterText, String resultText, String orderText, Long rangeFromIncl, Long rangeToExcl)
     {
-        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
+        {
+            ec.getStoreManager().manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        }
+        Table table = sd.getTable();
+
         boolean attributedRelation = Neo4jUtils.classIsAttributedRelation(cmd);
         if (candidateAlias == null)
         {
@@ -546,7 +561,13 @@ public class Neo4jUtils
     protected static Object getObjectUsingApplicationIdForDBObject(final PropertyContainer propObj, 
             final AbstractClassMetaData cmd, final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers)
     {
-        Table table = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
+        {
+            ec.getStoreManager().manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        }
+        Table table = sd.getTable();
         final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, fm);
 
@@ -600,8 +621,13 @@ public class Neo4jUtils
     protected static Object getObjectUsingDatastoreIdForDBObject(final PropertyContainer propObj, 
             final AbstractClassMetaData cmd, final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers)
     {
-        StoreManager storeMgr = ec.getStoreManager();
-        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
+        {
+            ec.getStoreManager().manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        }
+        Table table = sd.getTable();
         Object idKey = propObj.getProperty(table.getDatastoreIdColumn().getName());
 
         Object id = ec.getNucleusContext().getIdentityManager().getDatastoreId(cmd.getFullClassName(), idKey);
@@ -657,7 +683,13 @@ public class Neo4jUtils
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
         ObjectProvider op = ec.findObjectProvider(pc);
-        Table table = op.getStoreManager().getStoreDataForClass(cmd.getFullClassName()).getTable();
+        StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
+        {
+            ec.getStoreManager().manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
+        }
+        Table table = sd.getTable();
 
         if (op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
