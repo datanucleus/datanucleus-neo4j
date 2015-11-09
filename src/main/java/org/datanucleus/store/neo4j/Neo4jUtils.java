@@ -19,7 +19,6 @@ package org.datanucleus.store.neo4j;
 
 import java.lang.reflect.Array;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -55,12 +54,11 @@ import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.NucleusLogger;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 
@@ -251,26 +249,26 @@ public class Neo4jUtils
             NucleusLogger.DATASTORE_NATIVE.debug("Retrieving object using Cypher query : " + cypherString);
         }
 
-        ExecutionEngine engine = new ExecutionEngine(graphDB);
-        ExecutionResult result = engine.execute(cypherString.toString());
+        Result result = graphDB.execute(cypherString.toString());
         if (ec.getStatistics() != null)
         {
             // Add to statistics
             ec.getStatistics().incrementNumReads();
         }
 
-        Iterator<Map<String, Object>> iter = result.iterator();
-        if (!iter.hasNext())
+        if (!result.hasNext())
         {
+            result.close();
             return null;
         }
 
-        Map<String, Object> map = iter.next();
+        Map<String, Object> map = result.next();
         PropertyContainer propObj = (PropertyContainer)map.get("pc");
-        if (iter.hasNext())
+        if (result.hasNext())
         {
             throw new NucleusException("Query of Node/Relationship for object with id=" + id + " returned more than 1 result! : " + cypherString);
         }
+        result.close();
         return propObj;
     }
 
@@ -320,8 +318,7 @@ public class Neo4jUtils
             resultStr = null;
         }
 
-        ExecutionEngine engine = new ExecutionEngine(db);
-        ExecutionResult queryResult = engine.execute(cypherText);
+        Result queryResult = db.execute(cypherText);
 
         // Return as lazy-load results object
         return new LazyLoadQueryResult(query, queryResult, resultStr);

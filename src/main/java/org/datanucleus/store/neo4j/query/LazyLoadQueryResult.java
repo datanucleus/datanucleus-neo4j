@@ -38,8 +38,8 @@ import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.SoftValueMap;
 import org.datanucleus.util.StringUtils;
 import org.datanucleus.util.WeakValueMap;
-import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.Result;
 
 /**
  * QueryResult for Neo4j queries that tries to lazy load results from the provided ExecutionResult
@@ -54,9 +54,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
 {
     protected ExecutionContext ec;
 
-    protected ExecutionResult result;
-
-    protected Iterator<Map<String, Object>> resultIterator;
+    protected Result result;
 
     protected String candidateAliasName;
 
@@ -67,14 +65,13 @@ public class LazyLoadQueryResult extends AbstractQueryResult
     /** Map of object, keyed by the index (0, 1, etc). */
     protected Map<Integer, Object> itemsByIndex = null;
 
-    public LazyLoadQueryResult(Query q, ExecutionResult result, String cypherResult)
+    public LazyLoadQueryResult(Query q, Result result, String cypherResult)
     {
         super(q);
         this.candidateAliasName = query.getCompilation().getCandidateAlias();
         this.ec = q.getExecutionContext();
         this.cmd = ec.getMetaDataManager().getMetaDataForClass(query.getCandidateClass(), ec.getClassLoaderResolver());
         this.result = result;
-        this.resultIterator = result.iterator();
         this.cypherResults = (cypherResult != null ? cypherResult.split(",") : null);
 
         if (cypherResults == null || (candidateAliasName != null && cypherResults[0].equals(candidateAliasName)))
@@ -125,7 +122,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
     protected void closingConnection()
     {
         resultSizeMethod = "last";
-        if (loadResultsAtCommit && isOpen() && resultIterator != null)
+        if (loadResultsAtCommit && isOpen() && result != null)
         {
             // Query connection closing message
             NucleusLogger.QUERY.info(Localiser.msg("052606", query.toString()));
@@ -133,13 +130,14 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             synchronized (this)
             {
                 // Go through to end of Iterator
-                while (resultIterator.hasNext())
+                while (result.hasNext())
                 {
-                    Map<String, Object> map = resultIterator.next();
+                    Map<String, Object> map = result.next();
                     Object result = getResultFromMapRow(map);
                     itemsByIndex.put(itemsByIndex.size(), result);
                 }
-                resultIterator = null;
+                result.close();
+                result = null;
             }
         }
     }
@@ -208,7 +206,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             while (true)
             {
                 getNextObject();
-                if (resultIterator == null)
+                if (result == null)
                 {
                     size = itemsByIndex.size();
                     return size;
@@ -243,7 +241,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             {
                 return nextPojo;
             }
-            if (resultIterator == null)
+            if (result == null)
             {
                 throw new IndexOutOfBoundsException("Beyond size of the results (" + itemsByIndex.size() + ")");
             }
@@ -258,23 +256,24 @@ public class LazyLoadQueryResult extends AbstractQueryResult
      */
     protected Object getNextObject()
     {
-        if (resultIterator == null)
+        if (result == null)
         {
             // Already exhausted
             return null;
         }
 
-        Map<String, Object> map = resultIterator.next();
-        Object result = getResultFromMapRow(map);
-        itemsByIndex.put(itemsByIndex.size(), result);
+        Map<String, Object> map = result.next();
+        Object rowResult = getResultFromMapRow(map);
+        itemsByIndex.put(itemsByIndex.size(), rowResult);
 
-        if (!resultIterator.hasNext())
+        if (!result.hasNext())
         {
             // Reached end of results, so null the iterator to signify this
-            resultIterator = null;
+            result.close();
+            result = null;
         }
 
-        return result;
+        return rowResult;
     }
 
     /* (non-Javadoc)
@@ -315,7 +314,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
                     return true;
                 }
 
-                return (resultIterator != null && resultIterator.hasNext());
+                return (result != null && result.hasNext());
             }
         }
 
@@ -337,7 +336,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
                     ++nextRowNum;
                     return pojo;
                 }
-                else if (resultIterator != null && resultIterator.hasNext())
+                else if (result != null && result.hasNext())
                 {
                     // Get next value from resultIterator
                     Object pojo = getNextObject();

@@ -18,7 +18,6 @@ Contributors:
 package org.datanucleus.store.neo4j.valuegenerator;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -28,10 +27,9 @@ import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
 import org.datanucleus.util.Localiser;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Result;
 
 /**
  * Generator that uses a Node in Neo4j to store and allocate identity values.
@@ -83,15 +81,14 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
             if (db.index().existsForNodes(INCREMENT_INDEX))
             {
                 String cypherStr = "START n=node:" + INCREMENT_INDEX + "(" + INCREMENT_NAME + "=\"" + name + "\") RETURN n";
-                ExecutionEngine engine = new ExecutionEngine(db);
-                ExecutionResult queryResult = engine.execute(cypherStr);
-                Iterator<Map<String, Object>> iter = queryResult.iterator();
-                while (iter.hasNext())
+                Result queryResult = db.execute(cypherStr);
+                while (queryResult.hasNext())
                 {
-                    Map<String, Object> map = iter.next();
+                    Map<String, Object> map = queryResult.next();
                     generatorNode = (Node) map.get("n");
                     break;
                 }
+                queryResult.close();
             }
 
             if (generatorNode == null)

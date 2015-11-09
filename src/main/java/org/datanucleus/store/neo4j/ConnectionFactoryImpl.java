@@ -92,7 +92,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
             if (StringUtils.isWhitespace(propsFileName))
             {
                 NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB with name " + dbName);
-                graphDB = factory.newEmbeddedDatabase(dbName);
+                graphDB = factory.newEmbeddedDatabase(new File(dbName));
             }
             else
             {
@@ -100,12 +100,12 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
                 if (!propsFile.exists())
                 {
                     NucleusLogger.CONNECTION.debug("Connection properties file " + propsFileName + " doesn't exist! Starting Neo4j Embedded GraphDB using defaults");
-                    graphDB = factory.newEmbeddedDatabase(dbName);
+                    graphDB = factory.newEmbeddedDatabase(new File(dbName));
                 }
                 else
                 {
                     NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB using properties from file " + propsFileName);
-                    graphDB = factory.newEmbeddedDatabaseBuilder(dbName).loadPropertiesFromFile(propsFileName).newGraphDatabase();
+                    graphDB = factory.newEmbeddedDatabaseBuilder(new File(dbName)).loadPropertiesFromFile(propsFileName).newGraphDatabase();
                 }
             }
         }
