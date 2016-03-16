@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
@@ -297,6 +298,26 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         ExecutionContext ec = op.getExecutionContext();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
+        boolean optional = false;
+        if (value instanceof Optional)
+        {
+            if (relationType != RelationType.NONE)
+            {
+                relationType = RelationType.ONE_TO_ONE_UNI;
+            }
+
+            optional = true;
+            Optional opt = (Optional)value;
+            if (opt.isPresent())
+            {
+                value = opt.get();
+            }
+            else
+            {
+                value = null;
+            }
+        }
+
         if (value == null)
         {
             if (insert)
@@ -386,6 +407,10 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             }
         }
 
+        if (optional)
+        {
+            value = Optional.of(value);
+        }
         SCOUtils.wrapSCOField(op, fieldNumber, value, true);
     }
 

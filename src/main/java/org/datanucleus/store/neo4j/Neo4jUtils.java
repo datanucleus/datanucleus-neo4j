@@ -21,6 +21,7 @@ import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
@@ -748,32 +749,41 @@ public class Neo4jUtils
             return null;
         }
 
+        boolean optional = (mmd != null ? Optional.class.isAssignableFrom(mmd.getType()) : false);
+
         Class type = value.getClass();
         if (mmd != null)
         {
-            if (fieldRole == FieldRole.ROLE_COLLECTION_ELEMENT)
+            if (optional)
             {
                 type = ec.getClassLoaderResolver().classForName(mmd.getCollection().getElementType());
             }
-            else if (fieldRole == FieldRole.ROLE_ARRAY_ELEMENT)
-            {
-                type = ec.getClassLoaderResolver().classForName(mmd.getArray().getElementType());
-            }
-            else if (fieldRole == FieldRole.ROLE_MAP_KEY)
-            {
-                type = ec.getClassLoaderResolver().classForName(mmd.getMap().getKeyType());
-            }
-            else if (fieldRole == FieldRole.ROLE_MAP_VALUE)
-            {
-                type = ec.getClassLoaderResolver().classForName(mmd.getMap().getValueType());
-            }
             else
             {
-                type = mmd.getType();
+                if (fieldRole == FieldRole.ROLE_COLLECTION_ELEMENT)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getCollection().getElementType());
+                }
+                else if (fieldRole == FieldRole.ROLE_ARRAY_ELEMENT)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getArray().getElementType());
+                }
+                else if (fieldRole == FieldRole.ROLE_MAP_KEY)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getMap().getKeyType());
+                }
+                else if (fieldRole == FieldRole.ROLE_MAP_VALUE)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getMap().getValueType());
+                }
+                else
+                {
+                    type = mmd.getType();
+                }
             }
         }
 
-        if (mmd != null && mmd.hasCollection() && fieldRole == FieldRole.ROLE_FIELD)
+        if (mmd != null && mmd.hasCollection() && !optional && fieldRole == FieldRole.ROLE_FIELD)
         {
             Collection rawColl = (Collection)value;
             if (rawColl.isEmpty())
@@ -915,32 +925,41 @@ public class Neo4jUtils
             return null;
         }
 
+        boolean optional = (mmd != null ? Optional.class.isAssignableFrom(mmd.getType()) : false);
+
         Class type = value.getClass();
         if (mmd != null)
         {
-            if (fieldRole == FieldRole.ROLE_COLLECTION_ELEMENT)
+            if (optional)
             {
                 type = ec.getClassLoaderResolver().classForName(mmd.getCollection().getElementType());
             }
-            else if (fieldRole == FieldRole.ROLE_ARRAY_ELEMENT)
-            {
-                type = ec.getClassLoaderResolver().classForName(mmd.getArray().getElementType());
-            }
-            else if (fieldRole == FieldRole.ROLE_MAP_KEY)
-            {
-                type = ec.getClassLoaderResolver().classForName(mmd.getMap().getKeyType());
-            }
-            else if (fieldRole == FieldRole.ROLE_MAP_VALUE)
-            {
-                type = ec.getClassLoaderResolver().classForName(mmd.getMap().getValueType());
-            }
             else
             {
-                type = mmd.getType();
+                if (fieldRole == FieldRole.ROLE_COLLECTION_ELEMENT)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getCollection().getElementType());
+                }
+                else if (fieldRole == FieldRole.ROLE_ARRAY_ELEMENT)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getArray().getElementType());
+                }
+                else if (fieldRole == FieldRole.ROLE_MAP_KEY)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getMap().getKeyType());
+                }
+                else if (fieldRole == FieldRole.ROLE_MAP_VALUE)
+                {
+                    type = ec.getClassLoaderResolver().classForName(mmd.getMap().getValueType());
+                }
+                else
+                {
+                    type = mmd.getType();
+                }
             }
         }
 
-        if (mmd != null && mmd.hasCollection() && fieldRole == FieldRole.ROLE_FIELD)
+        if (mmd != null && mmd.hasCollection() && !optional && fieldRole == FieldRole.ROLE_FIELD)
         {
             Collection<Object> coll;
             try

@@ -265,47 +265,48 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                     else if (expr instanceof InvokeExpression)
                     {
                         InvokeExpression invokeExpr = (InvokeExpression)expr;
-                        if (invokeExpr.getLeft() == null)
+                        if (invokeExpr.getOperation().equalsIgnoreCase("MAX") ||
+                            invokeExpr.getOperation().equalsIgnoreCase("MIN") ||
+                            invokeExpr.getOperation().equalsIgnoreCase("SUM") ||
+                            invokeExpr.getOperation().equalsIgnoreCase("AVG") ||
+                            invokeExpr.getOperation().equalsIgnoreCase("COUNT"))
                         {
-                            List<Expression> argExprs = invokeExpr.getArguments();
-                            if (argExprs == null || argExprs.size() != 1)
+                            // Only support some aggregates
+                            if (invokeExpr.getLeft() == null)
                             {
-                                throw new NucleusUserException("Invalid number of arguments to MAX");
-                            }
+                                List<Expression> argExprs = invokeExpr.getArguments();
+                                if (argExprs == null || argExprs.size() != 1)
+                                {
+                                    throw new NucleusUserException("Invalid number of arguments to MAX");
+                                }
 
-                            Expression argExpr = argExprs.get(0);
-                            if (argExpr instanceof PrimaryExpression)
-                            {
-                                processPrimaryExpression((PrimaryExpression)argExpr);
-                            }
-                            else
-                            {
-                                throw new NucleusUserException("Invocation of static method " + 
-                                    invokeExpr.getOperation() +" with arg of type " + argExpr.getClass().getName() +
-                                    " not supported in-datastore");
-                            }
+                                Expression argExpr = argExprs.get(0);
+                                if (argExpr instanceof PrimaryExpression)
+                                {
+                                    processPrimaryExpression((PrimaryExpression)argExpr);
+                                }
+                                else
+                                {
+                                    throw new NucleusUserException("Invocation of static method " + 
+                                        invokeExpr.getOperation() +" with arg of type " + argExpr.getClass().getName() +
+                                            " not supported in-datastore");
+                                }
 
-                            Neo4jExpression aggrArgExpr = stack.pop();
-                            if (invokeExpr.getOperation().equalsIgnoreCase("MAX") ||
-                                invokeExpr.getOperation().equalsIgnoreCase("MIN") ||
-                                invokeExpr.getOperation().equalsIgnoreCase("SUM") ||
-                                invokeExpr.getOperation().equalsIgnoreCase("AVG") ||
-                                invokeExpr.getOperation().equalsIgnoreCase("COUNT"))
-                            {
+                                Neo4jExpression aggrArgExpr = stack.pop();
                                 Neo4jExpression aggExpr = new Neo4jAggregateExpression(invokeExpr.getOperation(), aggrArgExpr);
                                 str.append(aggExpr.getCypherText());
                             }
-                            else
-                            {
-                                throw new NucleusUserException("Invocation of static method " + 
-                                    invokeExpr.getOperation() +" not supported in-datastore");
-                            }
+                        }
+                        else
+                        {
+                            NucleusLogger.QUERY.warn("Invocation of static method " + invokeExpr.getOperation() +" not supported in-datastore");
+                            resultComplete = false;
+                            break;
                         }
                     }
                     else
                     {
-                        NucleusLogger.GENERAL.info("Query result expression " + expr + 
-                            " not supported via Cypher so will be processed in-memory");
+                        NucleusLogger.GENERAL.info("Query result expression " + expr + " not supported via Cypher so will be processed in-memory");
                         resultComplete = false;
                         break;
                     }

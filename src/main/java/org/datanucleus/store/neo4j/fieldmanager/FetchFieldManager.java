@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Map.Entry;
 
 import org.datanucleus.ClassLoaderResolver;
@@ -227,6 +228,18 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     protected Object fetchNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr)
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
+        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+
+        boolean optional = false;
+        if (Optional.class.isAssignableFrom(mmd.getType()))
+        {
+            if (relationType != RelationType.NONE)
+            {
+                relationType = RelationType.ONE_TO_ONE_UNI;
+            }
+            optional = true;
+        }
+
         if (RelationType.isRelationSingleValued(relationType))
         {
             if (!(propObj instanceof Node))
@@ -235,7 +248,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             }
 
             Node node = (Node)propObj;
-            return processSingleValuedRelationForNode(mmd, relationType, ec, clr, node);
+            Object value = processSingleValuedRelationForNode(mmd, relationType, ec, clr, node);
+            return optional ? (value!=null ? Optional.of(value) : Optional.empty()) : value;
         }
         else if (RelationType.isRelationMultiValued(relationType))
         {
@@ -250,11 +264,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             return processMultiValuedRelationForNode(mmd, relationType, ec, clr, node);
         }
 
-        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
         String propName = mapping.getColumn(0).getName(); // TODO Support multicol members
         if (!propObj.hasProperty(propName))
         {
-            return null;
+            return optional ? Optional.empty() : null;
         }
         Object value = propObj.getProperty(propName);
 
@@ -340,6 +353,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             Object propVal = propObj.getProperty(colName);
             returnValue = conv.toMemberType(propVal);
 
+            if (optional)
+            {
+                returnValue = (returnValue!=null) ? Optional.of(returnValue) : Optional.empty();
+            }
             if (op != null)
             {
                 returnValue = SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), returnValue, true);
@@ -348,16 +365,14 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
 
         Object fieldValue = Neo4jUtils.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
-        if (op != null)
+        if (optional)
         {
-            // Wrap if SCO
-            return SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), fieldValue, true);
+            fieldValue = (fieldValue!=null) ? Optional.of(fieldValue) : Optional.empty();
         }
-        return fieldValue;
+        return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), fieldValue, true) : fieldValue;
     }
 
-    protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType,
-            ExecutionContext ec, ClassLoaderResolver clr, Node node)
+    protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ExecutionContext ec, ClassLoaderResolver clr, Node node)
     {
         RelationshipType type = DNRelationshipType.SINGLE_VALUED;
         if (relationType == RelationType.MANY_TO_ONE_BI)
@@ -382,7 +397,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
         else
         {
-            relCmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+            boolean optional = (Optional.class.isAssignableFrom(mmd.getType()));
+            Class memberType = optional ? clr.classForName(mmd.getCollection().getElementType()) : mmd.getType();
+            relCmd = ec.getMetaDataManager().getMetaDataForClass(memberType, clr);
         }
 
         Iterable<Relationship> rels = node.getRelationships(type);
@@ -396,8 +413,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 if (memberName != null && memberName.equals(propNameValue))
                 {
                     Node relNode = rel.getOtherNode(node);
-                    return Neo4jUtils.getObjectForPropertyContainer(relNode,
-                        Neo4jUtils.getClassMetaDataForPropertyContainer(relNode, ec, relCmd), ec, false);
+                    return Neo4jUtils.getObjectForPropertyContainer(relNode, Neo4jUtils.getClassMetaDataForPropertyContainer(relNode, ec, relCmd), ec, false);
                 }
             }
         }
@@ -405,8 +421,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return null;
     }
 
-    protected Object processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType,
-            ExecutionContext ec, ClassLoaderResolver clr, Node node)
+    protected Object processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ExecutionContext ec, ClassLoaderResolver clr, Node node)
     {
         if (mmd.hasCollection())
         {
