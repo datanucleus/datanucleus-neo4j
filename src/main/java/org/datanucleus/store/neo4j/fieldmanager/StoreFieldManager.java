@@ -484,6 +484,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     {
         if (mmd.hasCollection())
         {
+            if (mmd.getCollection().isSerializedElement())
+            {
+                throw new NucleusUserException("Don't currently support serialised collection elements at " + mmd.getFullFieldName());
+            }
+
             Collection coll = (Collection)value;
             if ((insert && !mmd.isCascadePersist()) || (!insert && !mmd.isCascadeUpdate()))
             {
@@ -511,11 +516,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 Iterator collIter = coll.iterator();
                 while (collIter.hasNext())
                 {
-                    if (mmd.getCollection().isSerializedElement())
-                    {
-                        throw new NucleusUserException("Don't currently support serialised collection elements at " + mmd.getFullFieldName());
-                    }
-
                     Object element = collIter.next();
                     if (element != null)
                     {
@@ -584,17 +584,17 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else if (mmd.hasArray())
         {
-            List<Node> relNodes = new ArrayList<Node>();
+            if (mmd.getArray().isSerializedElement())
+            {
+                throw new NucleusUserException("Don't currently support serialised array elements at " + mmd.getFullFieldName());
+            }
 
             // Reachability : Persist any objects that are not yet persistent, gathering Node objects
+            List<Node> relNodes = new ArrayList<Node>();
             if (value != null)
             {
                 for (int i=0;i<Array.getLength(value);i++)
                 {
-                    if (mmd.getArray().isSerializedElement())
-                    {
-                        throw new NucleusUserException("Don't currently support serialised array elements at " + mmd.getFullFieldName());
-                    }
                     Object element = Array.get(value, i);
                     if (element != null)
                     {
@@ -657,6 +657,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
         else if (mmd.hasMap())
         {
+            if (mmd.getMap().isSerializedValue())
+            {
+                throw new NucleusUserException("Don't currently support serialised map values at " + mmd.getFullFieldName());
+            }
+
             Map map = (Map)value;
             if (!mmd.getMap().keyIsPersistent() && mmd.getMap().valueIsPersistent())
             {
@@ -668,11 +673,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Iterator<Map.Entry> mapEntryIter = map.entrySet().iterator();
                     while (mapEntryIter.hasNext())
                     {
-                        if (mmd.getMap().isSerializedValue())
-                        {
-                            throw new NucleusUserException("Don't currently support serialised map values at " + mmd.getFullFieldName());
-                        }
-
                         Map.Entry entry = mapEntryIter.next();
                         Object key = entry.getKey();
                         Object val = entry.getValue();
