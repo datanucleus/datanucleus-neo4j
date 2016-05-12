@@ -493,14 +493,19 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     {
                         coll.add(array[i]);
                     }
-
-                    if (mmd.getOrderMetaData() != null && mmd.getOrderMetaData().getOrdering() != null &&
-                        !mmd.getOrderMetaData().getOrdering().equals("#PK"))
-                    {
-                        // Reorder the collection as per the ordering clause (DN 3.0.10+)
-                        coll = QueryUtils.orderCandidates((List)coll, mmd.getType(), mmd.getOrderMetaData().getOrdering(), ec, clr);
-                    }
                     array = null;
+
+                    if (coll instanceof List && mmd.getOrderMetaData() != null && mmd.getOrderMetaData().getOrdering() != null && !mmd.getOrderMetaData().getOrdering().equals("#PK"))
+                    {
+                        // Reorder the collection as per the ordering clause
+                        Collection newColl = QueryUtils.orderCandidates((List)coll, clr.classForName(mmd.getCollection().getElementType()), mmd.getOrderMetaData().getOrdering(), ec, clr);
+                        if (newColl.getClass() != coll.getClass())
+                        {
+                            // Type has changed, so just reuse the input
+                            coll.clear();
+                            coll.addAll(newColl);
+                        }
+                    }
                 }
                 else
                 {
@@ -512,8 +517,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                         if (relMemberName != null && relMemberName.equals(mmd.getName()))
                         {
                             Node elemNode = rel.getOtherNode(node);
-                            Object elemPC = Neo4jUtils.getObjectForPropertyContainer(elemNode, 
-                                Neo4jUtils.getClassMetaDataForPropertyContainer(elemNode, ec, elemCmd), ec, false);
+                            Object elemPC = Neo4jUtils.getObjectForPropertyContainer(elemNode, Neo4jUtils.getClassMetaDataForPropertyContainer(elemNode, ec, elemCmd), ec, false);
                             coll.add(elemPC);
                         }
                     }
