@@ -20,7 +20,6 @@ package org.datanucleus.store.neo4j;
 import java.util.Iterator;
 
 import org.datanucleus.ExecutionContext;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
@@ -159,9 +158,10 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             }
         }
 
+        ExecutionContext ec = op.getExecutionContext();
         if (!storeMgr.managesClass(cmd.getFullClassName()))
         {
-            storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+            storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
         }
         Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
 
@@ -268,21 +268,12 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
 
         // Add multi-tenancy discriminator if applicable
-        if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
+        if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
-            if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
-            {
-                // Don't bother with multitenancy for this class
-            }
-            else
-            {
-                String propName = table.getMultitenancyColumn().getName();
-                propObj.setProperty(propName, storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID));
-            }
+            propObj.setProperty(table.getMultitenancyColumn().getName(), ec.getNucleusContext().getMultiTenancyId(ec, cmd));
         }
 
         // Insert non-relation fields
-        ExecutionContext ec = op.getExecutionContext();
         int[] nonRelPositions = cmd.getNonRelationMemberPositions(ec.getClassLoaderResolver(), ec.getMetaDataManager());
         StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
         op.provideFields(nonRelPositions, fm);

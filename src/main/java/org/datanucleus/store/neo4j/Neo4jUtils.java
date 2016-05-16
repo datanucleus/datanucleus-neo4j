@@ -26,7 +26,6 @@ import java.util.Optional;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.FetchPlan;
-import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.identity.IdentityUtils;
@@ -356,7 +355,6 @@ public class Neo4jUtils
         {
             candidateAlias = (attributedRelation ? "r" : "n");
         }
-        StoreManager storeMgr = ec.getStoreManager();
 
         StringBuilder cypherString = new StringBuilder();
 
@@ -373,22 +371,15 @@ public class Neo4jUtils
         // Add any WHERE clause
         boolean multiple = false;
         String multitenancyText = null;
-        if (storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID) != null)
+        if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
             // Restriction on multitenancy discriminator for this tenant
-            if ("true".equalsIgnoreCase(cmd.getValueForExtension("multitenancy-disable")))
+            String propName = table.getMultitenancyColumn().getName();
+            String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
+            multitenancyText = propName + " = \"" + value + "\"";
+            if (filterText != null)
             {
-                // Don't bother with multitenancy for this class
-            }
-            else
-            {
-                String propName = table.getMultitenancyColumn().getName();
-                String value = storeMgr.getStringProperty(PropertyNames.PROPERTY_MAPPING_TENANT_ID);
-                multitenancyText = propName + " = \"" + value + "\"";
-                if (filterText != null)
-                {
-                    multiple = true;
-                }
+                multiple = true;
             }
         }
         if (filterText != null || multitenancyText != null)
