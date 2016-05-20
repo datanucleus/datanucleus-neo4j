@@ -38,7 +38,6 @@ import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.IdentityType;
-import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.FieldValues;
@@ -54,6 +53,7 @@ import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.NucleusLogger;
+import org.datanucleus.util.TypeConversionHelper;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
@@ -836,13 +836,7 @@ public class Neo4jUtils
         }
         else if (Enum.class.isAssignableFrom(type))
         {
-            ColumnMetaData colmd = null;
-            if (mmd != null && mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
-            {
-                colmd = mmd.getColumnMetaData()[0];
-            }
-            boolean useNumeric = MetaDataUtils.persistColumnAsNumeric(colmd);
-            return useNumeric ? ((Enum)value).ordinal() : ((Enum)value).name();
+            return TypeConversionHelper.getStoredValueFromEnum(mmd, fieldRole, (Enum) value);
         }
 
         // Fallback to built-in type converters
@@ -997,16 +991,7 @@ public class Neo4jUtils
         }
         else if (Enum.class.isAssignableFrom(type))
         {
-            ColumnMetaData colmd = null;
-            if (mmd != null && mmd.getColumnMetaData() != null && mmd.getColumnMetaData().length > 0)
-            {
-                colmd = mmd.getColumnMetaData()[0];
-            }
-            if (MetaDataUtils.persistColumnAsNumeric(colmd))
-            {
-                return type.getEnumConstants()[((Number)value).intValue()];
-            }
-            return Enum.valueOf(type, (String)value);
+            return TypeConversionHelper.getEnumForStoredValue(mmd, fieldRole, value, ec.getClassLoaderResolver());
         }
 
         TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(type, String.class);
