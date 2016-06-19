@@ -26,8 +26,8 @@ import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.query.evaluator.JDOQLEvaluator;
-import org.datanucleus.query.evaluator.JavaQueryEvaluator;
+import org.datanucleus.query.inmemory.JDOQLInMemoryEvaluator;
+import org.datanucleus.query.inmemory.JavaQueryInMemoryEvaluator;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.connection.ManagedConnectionResourceListener;
@@ -291,7 +291,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 }
 
                 // Evaluate result/filter/grouping/having/ordering in-memory
-                JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, results, compilation, parameters, ec.getClassLoaderResolver());
+                JavaQueryInMemoryEvaluator resultMapper = new JDOQLInMemoryEvaluator(this, results, compilation, parameters, ec.getClassLoaderResolver());
                 // TODO Support resultClass
                 results = resultMapper.execute(filterInMemory, orderInMemory, resultInMemory, true, rangeInMemory);
             }
