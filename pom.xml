@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>datanucleus-neo4j</artifactId>
-	<version>5.0.1-SNAPSHIT</version>
+	<version>5.0.1-SNAPSHOT</version>
 
     <name>DataNucleus Neo4j plugin</name>
     <description>
