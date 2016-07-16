@@ -412,6 +412,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 String memberName = (String) rel.getProperty(propNameKey);
                 if (memberName != null && memberName.equals(propNameValue))
                 {
+                    if (!RelationType.isBidirectional(relationType) && !rel.getStartNode().equals(node))
+                    {
+                        // Not a relation starting at this node so ignore
+                        continue;
+                    }
+
                     Node relNode = rel.getOtherNode(node);
                     return Neo4jUtils.getObjectForPropertyContainer(relNode, Neo4jUtils.getClassMetaDataForPropertyContainer(relNode, ec, relCmd), ec, false);
                 }
