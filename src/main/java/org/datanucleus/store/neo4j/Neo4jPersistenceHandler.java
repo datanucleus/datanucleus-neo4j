@@ -223,7 +223,6 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         if (cmd.isVersioned())
         {
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-            String propName = table.getVersionColumn().getName();
             if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
             {
                 long versionNumber = 1;
@@ -245,7 +244,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 }
                 else
                 {
-                    propObj.setProperty(propName, versionNumber);
+                    propObj.setProperty(table.getVersionColumn().getName(), versionNumber);
                 }
             }
         }
@@ -458,8 +457,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Update the stored surrogate value
-                    String propName = table.getVersionColumn().getName();
-                    propObj.setProperty(propName, nextVersion);
+                    propObj.setProperty(table.getVersionColumn().getName(), nextVersion);
                 }
             }
 
@@ -646,8 +644,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Surrogate version
-                    String propName = table.getVersionColumn().getName();
-                    Object datastoreVersion = propObj.getProperty(propName);
+                    Object datastoreVersion = propObj.getProperty(table.getVersionColumn().getName());
                     op.setVersion(datastoreVersion);
                 }
             }
