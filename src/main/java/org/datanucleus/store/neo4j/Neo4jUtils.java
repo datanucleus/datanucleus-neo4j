@@ -33,8 +33,6 @@ import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
-import org.datanucleus.metadata.DiscriminatorMetaData;
-import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.IdentityType;
@@ -228,17 +226,8 @@ public class Neo4jUtils
 
         if (cmd.hasDiscriminatorStrategy())
         {
-            DiscriminatorMetaData discmd = cmd.getDiscriminatorMetaData();
             String propName = table.getDiscriminatorColumn().getName();
-            Object discVal = null;
-            if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
-            {
-                discVal = cmd.getFullClassName();
-            }
-            else
-            {
-                discVal = discmd.getValue();
-            }
+            Object discVal = cmd.getDiscriminatorValue();
             cypherString.append(" and (pc.").append(propName).append(" = \"").append(discVal).append("\")");
         }
 
