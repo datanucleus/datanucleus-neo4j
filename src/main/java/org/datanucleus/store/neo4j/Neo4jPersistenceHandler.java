@@ -98,7 +98,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 PropertyContainer propObj = (PropertyContainer)op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
 
                 // Process relation fields
-                int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver(), ec.getMetaDataManager());
+                int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
                 if (relPositions.length > 0)
                 {
                     StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
@@ -261,7 +261,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
 
         // Insert non-relation fields
-        int[] nonRelPositions = cmd.getNonRelationMemberPositions(ec.getClassLoaderResolver(), ec.getMetaDataManager());
+        int[] nonRelPositions = cmd.getNonRelationMemberPositions(ec.getClassLoaderResolver());
         StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
         op.provideFields(nonRelPositions, fm);
 
@@ -291,7 +291,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
 
             // Step 2 : Set relation fields
-            int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver(), ec.getMetaDataManager());
+            int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
             if (relPositions.length > 0)
             {
                 StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
@@ -503,7 +503,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
             // Invoke any cascade deletion
             op.loadUnloadedFields();
-            int[] relMemberPosns = cmd.getRelationMemberPositions(ec.getClassLoaderResolver(), ec.getMetaDataManager());
+            int[] relMemberPosns = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
             op.provideFields(relMemberPosns, new DeleteFieldManager(op, true));
 
             long startTime = System.currentTimeMillis();

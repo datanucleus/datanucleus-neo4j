@@ -442,7 +442,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 throw new NucleusDataStoreException(e.getMessage(), e);
             }
 
-            AbstractClassMetaData elemCmd = mmd.getCollection().getElementClassMetaData(clr, ec.getMetaDataManager());
+            AbstractClassMetaData elemCmd = mmd.getCollection().getElementClassMetaData(clr);
             if (elemCmd == null)
             {
                 // Try any listed implementations
@@ -539,7 +539,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         }
         else if (mmd.hasArray())
         {
-            AbstractClassMetaData elemCmd = mmd.getArray().getElementClassMetaData(clr, ec.getMetaDataManager());
+            AbstractClassMetaData elemCmd = mmd.getArray().getElementClassMetaData(clr);
             if (elemCmd == null)
             {
                 // Try any listed implementations
@@ -616,8 +616,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 throw new NucleusDataStoreException(e.getMessage(), e);
             }
 
-            AbstractClassMetaData keyCmd = mmd.getMap().getKeyClassMetaData(clr, ec.getMetaDataManager());
-            AbstractClassMetaData valCmd = mmd.getMap().getValueClassMetaData(clr, ec.getMetaDataManager());
+            AbstractClassMetaData keyCmd = mmd.getMap().getKeyClassMetaData(clr);
+            AbstractClassMetaData valCmd = mmd.getMap().getValueClassMetaData(clr);
             String propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME;
             if (relationType == RelationType.MANY_TO_MANY_BI && mmd.getMappedBy() != null)
             {
