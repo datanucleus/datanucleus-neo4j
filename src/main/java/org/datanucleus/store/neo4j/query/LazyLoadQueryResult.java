@@ -33,11 +33,12 @@ import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.query.AbstractQueryResult;
 import org.datanucleus.store.query.AbstractQueryResultIterator;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.util.ConcurrentReferenceHashMap;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.SoftValueMap;
 import org.datanucleus.util.StringUtils;
-import org.datanucleus.util.WeakValueMap;
+import org.datanucleus.util.ConcurrentReferenceHashMap.ReferenceType;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Result;
 
@@ -94,7 +95,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             }
             else if (cacheType.equalsIgnoreCase("weak"))
             {
-                itemsByIndex = new WeakValueMap();
+                itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.WEAK);
             }
             else if (cacheType.equalsIgnoreCase("strong"))
             {
@@ -106,12 +107,12 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             }
             else
             {
-                itemsByIndex = new WeakValueMap();
+                itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.WEAK);
             }
         }
         else
         {
-            itemsByIndex = new WeakValueMap();
+            itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.WEAK);
         }
     }
 
