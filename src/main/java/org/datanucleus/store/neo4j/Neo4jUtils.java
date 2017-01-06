@@ -46,6 +46,7 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.neo4j.query.LazyLoadQueryResult;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
 import org.datanucleus.store.types.converters.TypeConverter;
@@ -212,7 +213,7 @@ public class Neo4jUtils
                 return null;
             }
             Object value = IdentityUtils.getTargetKeyForDatastoreIdentity(id);
-            String propName = table.getDatastoreIdColumn().getName();
+            String propName = table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID).getName();
             cypherString.append(" WHERE (pc.");
             cypherString.append(propName);
             cypherString.append(" = ");
@@ -226,7 +227,7 @@ public class Neo4jUtils
 
         if (cmd.hasDiscriminatorStrategy())
         {
-            String propName = table.getDiscriminatorColumn().getName();
+            String propName = table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR).getName();
             Object discVal = cmd.getDiscriminatorValue();
             cypherString.append(" and (pc.").append(propName).append(" = \"").append(discVal).append("\")");
         }
@@ -363,7 +364,7 @@ public class Neo4jUtils
         if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
             // Restriction on multitenancy discriminator for this tenant
-            String propName = table.getMultitenancyColumn().getName();
+            String propName = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName();
             String value = ec.getNucleusContext().getMultiTenancyId(ec, cmd);
             multitenancyText = propName + " = \"" + value + "\"";
             if (filterText != null)
@@ -588,7 +589,7 @@ public class Neo4jUtils
                 else
                 {
                     // Get the surrogate version from the datastore
-                    version = propObj.getProperty(table.getVersionColumn().getName());
+                    version = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                 }
                 op.setVersion(version);
             }
@@ -606,7 +607,7 @@ public class Neo4jUtils
             sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
         }
         Table table = sd.getTable();
-        Object idKey = propObj.getProperty(table.getDatastoreIdColumn().getName());
+        Object idKey = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID).getName());
 
         Object id = ec.getNucleusContext().getIdentityManager().getDatastoreId(cmd.getFullClassName(), idKey);
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
@@ -646,7 +647,7 @@ public class Neo4jUtils
                 else
                 {
                     // Get the surrogate version from the datastore
-                    version = propObj.getProperty(table.getVersionColumn().getName());
+                    version = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                 }
                 op.setVersion(version);
             }
@@ -705,7 +706,7 @@ public class Neo4jUtils
                 else
                 {
                     // Get the surrogate version from the datastore
-                    version = propObj.getProperty(table.getVersionColumn().getName());
+                    version = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                 }
                 op.setVersion(version);
             }

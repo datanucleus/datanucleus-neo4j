@@ -40,6 +40,7 @@ import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.StoreFieldManager;
+import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
@@ -213,7 +214,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            String propName = table.getDatastoreIdColumn().getName();
+            String propName = table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID).getName();
             Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId());
             propObj.setProperty(propName, key);
         }
@@ -242,7 +243,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 }
                 else
                 {
-                    propObj.setProperty(table.getVersionColumn().getName(), versionNumber);
+                    propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName(), versionNumber);
                 }
             }
         }
@@ -250,14 +251,14 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         if (cmd.hasDiscriminatorStrategy())
         {
             // Add discriminator field
-            String propName = table.getDiscriminatorColumn().getName();
+            String propName = table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR).getName();
             propObj.setProperty(propName, cmd.getDiscriminatorValue());
         }
 
         // Add multi-tenancy discriminator if applicable
         if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
-            propObj.setProperty(table.getMultitenancyColumn().getName(), ec.getNucleusContext().getMultiTenancyId(ec, cmd));
+            propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName(), ec.getNucleusContext().getMultiTenancyId(ec, cmd));
         }
 
         // Insert non-relation fields
@@ -445,7 +446,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Update the stored surrogate value
-                    propObj.setProperty(table.getVersionColumn().getName(), nextVersion);
+                    propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName(), nextVersion);
                 }
             }
 
@@ -632,7 +633,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 else
                 {
                     // Surrogate version
-                    Object datastoreVersion = propObj.getProperty(table.getVersionColumn().getName());
+                    Object datastoreVersion = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                     op.setVersion(datastoreVersion);
                 }
             }
