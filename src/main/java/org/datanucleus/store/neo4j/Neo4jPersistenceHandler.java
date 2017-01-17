@@ -34,7 +34,6 @@ import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.VersionHelper;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
@@ -418,7 +417,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 // Version object so calculate version to store with
                 Object currentVersion = op.getTransactionalVersion();
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), currentVersion);
+                Object nextVersion = ec.getNextVersion(vermd.getVersionStrategy(), currentVersion);
                 op.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
