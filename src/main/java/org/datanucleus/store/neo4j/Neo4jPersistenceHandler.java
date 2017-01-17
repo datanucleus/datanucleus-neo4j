@@ -417,7 +417,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 // Version object so calculate version to store with
                 Object currentVersion = op.getTransactionalVersion();
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                Object nextVersion = ec.getNextVersion(vermd.getVersionStrategy(), currentVersion);
+                Object nextVersion = ec.getNextVersion(vermd, currentVersion);
                 op.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
