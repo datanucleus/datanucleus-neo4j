@@ -249,15 +249,21 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
         if (cmd.hasDiscriminatorStrategy())
         {
-            // Add discriminator field
+            // Discriminator field
             String propName = table.getSurrogateColumn(SurrogateColumnType.DISCRIMINATOR).getName();
             propObj.setProperty(propName, cmd.getDiscriminatorValue());
         }
 
-        // Add multi-tenancy discriminator if applicable
         if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
+            // Multi-tenancy discriminator
             propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName(), ec.getNucleusContext().getMultiTenancyId(ec, cmd));
+        }
+
+        if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+        {
+            // Soft-delete flag
+            propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE).getName(), Boolean.FALSE);
         }
 
         // Insert non-relation fields

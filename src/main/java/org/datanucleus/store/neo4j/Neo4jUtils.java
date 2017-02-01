@@ -360,6 +360,7 @@ public class Neo4jUtils
 
         // Add any WHERE clause
         boolean multiple = false;
+
         String multitenancyText = null;
         if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
@@ -372,7 +373,20 @@ public class Neo4jUtils
                 multiple = true;
             }
         }
-        if (filterText != null || multitenancyText != null)
+
+        String softDeleteText = null;
+        if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+        {
+            // Restriction on soft-delete flag
+            String propName = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE).getName();
+            softDeleteText = propName + " = \"" + Boolean.FALSE + "\"";
+            if (filterText != null)
+            {
+                multiple = true;
+            }
+        }
+
+        if (filterText != null || multitenancyText != null || softDeleteText != null)
         {
             cypherString.append(" WHERE ");
             boolean started = false;
@@ -400,6 +414,22 @@ public class Neo4jUtils
                     cypherString.append("(");
                 }
                 cypherString.append(multitenancyText);
+                if (multiple)
+                {
+                    cypherString.append(")");
+                }
+            }
+            if (softDeleteText != null)
+            {
+                if (started)
+                {
+                    cypherString.append(" and");
+                }
+                if (multiple)
+                {
+                    cypherString.append("(");
+                }
+                cypherString.append(softDeleteText);
                 if (multiple)
                 {
                     cypherString.append(")");
