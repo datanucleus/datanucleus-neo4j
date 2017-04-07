@@ -251,8 +251,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
 
     /**
      * Method to extract the next object from the candidateResults (if there is one).
-     * If a result is present, this puts it into "itemsByIndex".
-     * Returns null if no more results.
+     * If a result is present, this puts it into "itemsByIndex". Returns null if no more results.
      * @return The next result (or null if no more).
      */
     protected Object getNextObject()
@@ -263,18 +262,18 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             return null;
         }
 
-        Map<String, Object> map = result.next();
-        Object rowResult = getResultFromMapRow(map);
-        itemsByIndex.put(itemsByIndex.size(), rowResult);
-
-        if (!result.hasNext())
+        if (result.hasNext())
         {
-            // Reached end of results, so null the iterator to signify this
-            result.close();
-            result = null;
+            Map<String, Object> map = result.next();
+            Object rowResult = getResultFromMapRow(map);
+            itemsByIndex.put(itemsByIndex.size(), rowResult);
+            return rowResult;
         }
 
-        return rowResult;
+        // Reached end of results, so null the iterator to signify this
+        result.close();
+        result = null;
+        return null;
     }
 
     /* (non-Javadoc)
