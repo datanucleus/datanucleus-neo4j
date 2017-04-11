@@ -577,6 +577,7 @@ public class Neo4jUtils
             sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
         }
         Table table = sd.getTable();
+
         final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, fm);
 
@@ -623,7 +624,11 @@ public class Neo4jUtils
                 }
                 op.setVersion(version);
             }
+
+            // Any fields loaded above will not be wrapped since we did not have the ObjectProvider at the point of creating the FetchFieldManager, so wrap them now
+            op.replaceAllLoadedSCOFieldsWithWrappers();
         }
+
         return pc;
     }
 
@@ -647,7 +652,7 @@ public class Neo4jUtils
         {
             // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created so load the fieldValues from it.
             op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
+            final FieldManager fm = new FetchFieldManager(op, propObj, table);
             op.loadFieldValues(new FieldValues()
             {
                 public void fetchFields(ObjectProvider op)
@@ -682,6 +687,7 @@ public class Neo4jUtils
                 op.setVersion(version);
             }
         }
+
         return pc;
     }
 
@@ -692,6 +698,7 @@ public class Neo4jUtils
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
         ObjectProvider op = ec.findObjectProvider(pc);
+
         StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
         if (sd == null)
         {
@@ -705,7 +712,7 @@ public class Neo4jUtils
             // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
             // so load the fieldValues from it.
             op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            final FieldManager fm = new FetchFieldManager(ec, propObj, cmd, table);
+            final FieldManager fm = new FetchFieldManager(op, propObj, table);
             op.loadFieldValues(new FieldValues()
             {
                 public void fetchFields(ObjectProvider op)
