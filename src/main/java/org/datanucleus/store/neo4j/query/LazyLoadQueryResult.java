@@ -36,7 +36,6 @@ import org.datanucleus.store.query.Query;
 import org.datanucleus.util.ConcurrentReferenceHashMap;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
-import org.datanucleus.util.SoftValueMap;
 import org.datanucleus.util.StringUtils;
 import org.datanucleus.util.ConcurrentReferenceHashMap.ReferenceType;
 import org.neo4j.graphdb.PropertyContainer;
@@ -91,7 +90,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         {
             if (cacheType.equalsIgnoreCase("soft"))
             {
-                itemsByIndex = new SoftValueMap();
+                itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.SOFT);
             }
             else if (cacheType.equalsIgnoreCase("weak"))
             {
