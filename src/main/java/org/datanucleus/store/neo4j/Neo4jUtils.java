@@ -36,6 +36,7 @@ import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.IdentityType;
+import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.FieldValues;
@@ -102,14 +103,14 @@ public class Neo4jUtils
      * @return The Node/Relationship for this object (or null if not found)
      * @throws NucleusException if more than 1 Node/Relationship is found matching this object identity!
      */
-    public static PropertyContainer getPropertyContainerForObjectId(GraphDatabaseService graphDB, ExecutionContext ec, 
-            AbstractClassMetaData cmd, Object id)
+    public static PropertyContainer getPropertyContainerForObjectId(GraphDatabaseService graphDB, ExecutionContext ec, AbstractClassMetaData cmd, Object id)
     {
         StoreManager storeMgr = ec.getStoreManager();
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
         StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         if (sd == null)
         {
-            storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            storeMgr.manageClasses(clr, cmd.getFullClassName());
             sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         }
         Table table = sd.getTable();
@@ -177,6 +178,13 @@ public class Neo4jUtils
             for (int i=0;i<pkPositions.length;i++)
             {
                 AbstractMemberMetaData pkMmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkPositions[i]);
+                RelationType relType = pkMmd.getRelationType(clr);
+                if (relType != RelationType.NONE)
+                {
+                    // TODO Support this. CompoundIdentity. Maybe we omit this and check after the retrieval for the right relation?
+                    throw new NucleusException("We do not currently support retrieving objects with PK field that is a relation : " + pkMmd.getFullFieldName());
+                }
+
                 Object value = null;
                 if (cmd.usesSingleFieldIdentityClass())
                 {
