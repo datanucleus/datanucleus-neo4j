@@ -33,6 +33,7 @@ import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.state.ObjectProvider;
 import org.datanucleus.store.AbstractPersistenceHandler;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.fieldmanager.DeleteFieldManager;
@@ -94,7 +95,14 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             for (ObjectProvider op : ops)
             {
                 AbstractClassMetaData cmd = op.getClassMetaData();
-                Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+                StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+                if (sd == null)
+                {
+                    storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                    sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+                }
+                Table table = sd.getTable();
+
                 PropertyContainer propObj = (PropertyContainer)op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
 
                 // Process relation fields
@@ -157,11 +165,13 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
 
         ExecutionContext ec = op.getExecutionContext();
-        if (!storeMgr.managesClass(cmd.getFullClassName()))
+        StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+        if (sd == null)
         {
-            storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+            storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+            sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         }
-        Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+        Table table = sd.getTable();
 
         // Create the PropertyContainer; currently only support as a Node.
         // TODO Support persisting as "attributed relation" where the object has source and target objects and no other relation field
@@ -294,7 +304,13 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             // Step 1 : Create PropertyContainer with non-relation fields
             PropertyContainer propObj = insertObjectToPropertyContainer(op, db);
             AbstractClassMetaData cmd = op.getClassMetaData();
-            Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
+            {
+                storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            }
+            Table table = sd.getTable();
 
             // Step 2 : Set relation fields
             int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
@@ -400,11 +416,13 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Update.Start", op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
             }
 
-            if (!storeMgr.managesClass(cmd.getFullClassName()))
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
             {
                 storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             }
-            Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+            Table table = sd.getTable();
 
             PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
             if (propObj == null)
@@ -608,11 +626,13 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("Neo4j.Fetch.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
-            if (!storeMgr.managesClass(cmd.getFullClassName()))
+            StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+            if (sd == null)
             {
                 storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             }
-            Table table = storeMgr.getStoreDataForClass(cmd.getFullClassName()).getTable();
+            Table table = sd.getTable();
 
             // Find the Node for this ObjectProvider
             PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
@@ -676,9 +696,10 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             ManagedConnection mconn = storeMgr.getConnection(ec);
             try
             {
-                if (!storeMgr.managesClass(cmd.getFullClassName()))
+                StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
+                if (sd == null)
                 {
-                    storeMgr.manageClasses(ec.getClassLoaderResolver(), cmd.getFullClassName());
+                    storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
                 }
 
                 GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
