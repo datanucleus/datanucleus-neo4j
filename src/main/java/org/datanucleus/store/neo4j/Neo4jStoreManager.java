@@ -159,7 +159,7 @@ public class Neo4jStoreManager extends AbstractStoreManager
             return;
         }
 
-        ManagedConnection mconn = getConnection(-1);
+        ManagedConnection mconn = connectionMgr.getConnection(-1);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();

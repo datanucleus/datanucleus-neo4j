@@ -74,7 +74,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     public void insertObjects(ObjectProvider... ops)
     {
         ExecutionContext ec = ops[0].getExecutionContext();
-        ManagedConnection mconn = storeMgr.getConnection(ec);
+        ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
@@ -290,7 +290,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     public void insertObject(ObjectProvider op)
     {
         ExecutionContext ec = op.getExecutionContext();
-        ManagedConnection mconn = storeMgr.getConnection(ec);
+        ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
@@ -395,7 +395,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         assertReadOnlyForUpdateOfObject(op);
 
         ExecutionContext ec = op.getExecutionContext();
-        ManagedConnection mconn = storeMgr.getConnection(ec);
+        ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService) mconn.getConnection();
@@ -514,7 +514,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
         AbstractClassMetaData cmd = op.getClassMetaData();
         ExecutionContext ec = op.getExecutionContext();
-        ManagedConnection mconn = storeMgr.getConnection(ec);
+        ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
@@ -597,7 +597,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         AbstractClassMetaData cmd = op.getClassMetaData();
 
         ExecutionContext ec = op.getExecutionContext();
-        ManagedConnection mconn = storeMgr.getConnection(ec);
+        ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
@@ -693,7 +693,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             cmd.getIdentityType() == IdentityType.DATASTORE)
         {
             ExecutionContext ec = op.getExecutionContext();
-            ManagedConnection mconn = storeMgr.getConnection(ec);
+            ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
             try
             {
                 StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());

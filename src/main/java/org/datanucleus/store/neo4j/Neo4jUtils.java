@@ -1100,7 +1100,7 @@ public class Neo4jUtils
             ClassLoaderResolver clr)
     {
         StoreManager storeMgr = ec.getStoreManager();
-        ManagedConnection mconn = storeMgr.getConnection(ec);
+        ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();

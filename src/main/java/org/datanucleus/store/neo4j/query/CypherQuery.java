@@ -93,7 +93,7 @@ public class CypherQuery extends AbstractJavaQuery
 
     protected Object performExecute(Map parameters)
     {
-        ManagedConnection mconn = getStoreManager().getConnection(ec);
+        ManagedConnection mconn = getStoreManager().getConnectionManager().getConnection(ec);
         List results = new ArrayList();
         try
         {
