@@ -215,7 +215,7 @@ public class Neo4jUtils
         }
         else if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            if (id == null || storeMgr.isStrategyDatastoreAttributed(cmd, -1))
+            if (id == null || storeMgr.isValueGenerationStrategyDatastoreAttributed(cmd, -1))
             {
                 // Not yet set, so return null (needs to be attributed in the datastore)
                 return null;

@@ -204,7 +204,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 for (int i=0;i<pkFieldNumbers.length;i++)
                 {
                     AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(pkFieldNumbers[i]);
-                    if (storeMgr.isStrategyDatastoreAttributed(cmd, pkFieldNumbers[i]))
+                    if (storeMgr.isValueGenerationStrategyDatastoreAttributed(cmd, pkFieldNumbers[i]))
                     {
                         if (!Number.class.isAssignableFrom(mmd.getType()) && mmd.getType() != long.class && mmd.getType() != int.class)
                         {

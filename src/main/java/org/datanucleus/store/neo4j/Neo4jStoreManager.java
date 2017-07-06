@@ -188,9 +188,9 @@ public class Neo4jStoreManager extends AbstractStoreManager
      * @param strategy The strategy
      * @return Whether it is supported.
      */
-    public boolean supportsValueStrategy(String strategy)
+    public boolean supportsValueGenerationStrategy(String strategy)
     {
-        if (super.supportsValueStrategy(strategy))
+        if (super.supportsValueGenerationStrategy(strategy))
         {
             return true;
         }
