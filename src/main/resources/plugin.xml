@@ -23,23 +23,14 @@ Contributors:
         <store-manager class-name="org.datanucleus.store.neo4j.Neo4jStoreManager" key="neo4j" url-key="neo4j"/>
     </extension>
 
-    <!-- QUERY LANGUAGES -->
-    <extension point="org.datanucleus.store_query_query">
-        <query class-name="org.datanucleus.store.neo4j.query.JDOQLQuery" datastore="neo4j" name="JDOQL"/>
-        <query class-name="org.datanucleus.store.neo4j.query.JPQLQuery" datastore="neo4j" name="JPQL"/>
-        <query class-name="org.datanucleus.store.neo4j.query.CypherQuery" datastore="neo4j" name="Cypher"/>
-    </extension>
-
     <!-- CONNECTION FACTORY -->
     <extension point="org.datanucleus.store_connectionfactory">
-        <connectionfactory name="neo4j" class-name="org.datanucleus.store.neo4j.ConnectionFactoryImpl" 
-            transactional="true" datastore="neo4j"/>
+        <connectionfactory name="neo4j" class-name="org.datanucleus.store.neo4j.ConnectionFactoryImpl" transactional="true" datastore="neo4j"/>
     </extension>
 
     <!-- VALUE GENERATORS -->
     <extension point="org.datanucleus.store_valuegenerator">
-        <valuegenerator name="increment" class-name="org.datanucleus.store.neo4j.valuegenerator.IncrementGenerator" 
-            datastore="neo4j"/>
+        <valuegenerator name="increment" class-name="org.datanucleus.store.neo4j.valuegenerator.IncrementGenerator" datastore="neo4j"/>
     </extension>
 
     <!-- PERSISTENCE PROPERTIES -->
