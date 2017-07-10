@@ -34,6 +34,7 @@ import org.datanucleus.store.neo4j.Neo4jStoreManager;
 import org.datanucleus.store.neo4j.Neo4jUtils;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.store.query.AbstractQueryResult;
+import org.datanucleus.store.query.Query;
 import org.datanucleus.store.query.QueryManager;
 import org.datanucleus.store.query.QueryResult;
 import org.datanucleus.util.Localiser;
@@ -229,7 +230,7 @@ public class JPQLQuery extends AbstractJPQLQuery
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021046", "JPQL", getSingleStringQuery(), null));
+                NucleusLogger.QUERY.debug(Localiser.msg("021046", Query.LANGUAGE_JPQL, getSingleStringQuery(), null));
             }
 
             List candidates = null;
@@ -303,7 +304,7 @@ public class JPQLQuery extends AbstractJPQLQuery
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", "JPQL", 
+                NucleusLogger.QUERY.debug(Localiser.msg("021074", Query.LANGUAGE_JPQL, 
                     "" + (System.currentTimeMillis() - startTime)));
             }
 
