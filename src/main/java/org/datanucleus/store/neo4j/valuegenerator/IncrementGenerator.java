@@ -23,8 +23,9 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.datanucleus.exceptions.NucleusUserException;
+import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.ManagedConnection;
-import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
+import org.datanucleus.store.valuegenerator.AbstractConnectedGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
 import org.datanucleus.util.Localiser;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -36,7 +37,7 @@ import org.neo4j.graphdb.Result;
  * Each class/field where "increment" is specified will have its own Node with current value property, and
  * all "increment" Nodes are in a special index "DN_INCREMENT_INDEX".
  */
-public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
+public class IncrementGenerator extends AbstractConnectedGenerator<Long>
 {
     /** The index containing all increment nodes. */
     protected static final String INCREMENT_INDEX = "DN_INCREMENT_INDEX";
@@ -59,12 +60,13 @@ public class IncrementGenerator extends AbstractDatastoreGenerator<Long>
      * <li>column-name : Name of the column in the table (for the field)</li>
      * <li>sequence-name : Name of the sequence (if specified in MetaData as "sequence)</li>
      * </ul>
+     * @param storeMgr StoreManager
      * @param name Symbolic name for the generator
      * @param props Properties controlling the behaviour of the generator (or null if not required).
      */
-    public IncrementGenerator(String name, Properties props)
+    public IncrementGenerator(StoreManager storeMgr, String name, Properties props)
     {
-        super(name, props);
+        super(storeMgr, name, props);
     }
 
     @Override
