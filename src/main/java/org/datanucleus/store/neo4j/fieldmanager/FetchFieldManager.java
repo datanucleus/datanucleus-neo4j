@@ -94,13 +94,19 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
+    private Object getPropertyForColumn(PropertyContainer propObj, String columnName)
+    {
+        return (propObj.hasProperty(columnName)) ? propObj.getProperty(columnName) : null;
+    }
+
     /* (non-Javadoc)
      * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchBooleanField(int)
      */
     @Override
     public boolean fetchBooleanField(int fieldNumber)
     {
-        return (Boolean)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Boolean val = (Boolean)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? false : val;
     }
 
     /* (non-Javadoc)
@@ -109,7 +115,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public byte fetchByteField(int fieldNumber)
     {
-        return (Byte)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Byte val = (Byte)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -118,7 +125,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public char fetchCharField(int fieldNumber)
     {
-        return (Character)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Character val = (Character)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -127,7 +135,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public double fetchDoubleField(int fieldNumber)
     {
-        return (Double)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Double val = (Double)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -136,7 +145,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public float fetchFloatField(int fieldNumber)
     {
-        return (Float)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Float val = (Float)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -145,7 +155,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public int fetchIntField(int fieldNumber)
     {
-        return (Integer)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Integer val = (Integer)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -154,7 +165,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public long fetchLongField(int fieldNumber)
     {
-        return (Long)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Long val = (Long)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -163,7 +175,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public short fetchShortField(int fieldNumber)
     {
-        return (Short)propObj.getProperty(getColumnMapping(fieldNumber).getColumn(0).getName());
+        Short val = (Short)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
+        return (val == null) ? 0 : val;
     }
 
     /* (non-Javadoc)
@@ -172,8 +185,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
     @Override
     public String fetchStringField(int fieldNumber)
     {
-        String propName = getColumnMapping(fieldNumber).getColumn(0).getName();
-        return propObj.hasProperty(propName) ? (String)propObj.getProperty(propName) : null;
+        return (String) getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
     }
 
     /* (non-Javadoc)
