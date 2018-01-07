@@ -38,7 +38,7 @@ public class Neo4jBooleanExpression extends Neo4jExpression
         }
         else if (op == Expression.OP_NOTEQ)
         {
-            cypherText = propName + " != " + valueStr;
+            cypherText = propName + " <> " + valueStr;
         }
         else if (op == Expression.OP_GT)
         {
