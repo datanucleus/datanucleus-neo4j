@@ -32,13 +32,14 @@ public class Neo4jBooleanExpression extends Neo4jExpression
             // Quote any strings
             valueStr = "\"" + valueStr + "\"";
         }
+
         if (op == Expression.OP_EQ)
         {
-            cypherText = propName + " = " + valueStr;
+            cypherText = propName + (value == null ? " IS NULL" : " = " + valueStr);
         }
         else if (op == Expression.OP_NOTEQ)
         {
-            cypherText = propName + " <> " + valueStr;
+            cypherText = propName + (value == null ? " IS NOT NULL" : " <> " + valueStr);
         }
         else if (op == Expression.OP_GT)
         {
