@@ -17,21 +17,39 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.neo4j.query.expression;
 
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
+
 /**
  * Expression for a field in a Neo4j query.
  */
 public class Neo4jFieldExpression extends Neo4jExpression
 {
+    MemberColumnMapping mapping;
+    AbstractMemberMetaData mmd;
     String fieldName;
 
-    public Neo4jFieldExpression(String fieldName)
+    public Neo4jFieldExpression(String fieldName, AbstractMemberMetaData mmd, MemberColumnMapping mapping)
     {
         this.fieldName = fieldName;
         this.cypherText = fieldName;
+
+        this.mmd = mmd;
+        this.mapping = mapping;
     }
 
     public String getFieldName()
     {
         return fieldName;
+    }
+
+    public MemberColumnMapping getMemberColumnMapping()
+    {
+        return mapping;
+    }
+
+    public AbstractMemberMetaData getMemberMetaData()
+    {
+        return mmd;
     }
 }

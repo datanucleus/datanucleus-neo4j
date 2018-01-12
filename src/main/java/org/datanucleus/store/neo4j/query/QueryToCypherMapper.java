@@ -48,7 +48,9 @@ import org.datanucleus.store.neo4j.query.expression.Neo4jBooleanExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jFieldExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jLiteral;
+import org.datanucleus.store.neo4j.query.expression.Neo4jStringExpression;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCO;
 import org.datanucleus.store.types.converters.TypeConverter;
@@ -167,6 +169,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             }
             catch (Exception e)
             {
+                NucleusLogger.GENERAL.info(">> exception in filter", e);
                 // Impossible to compile all to run in the datastore, so just exit
                 if (NucleusLogger.QUERY.isDebugEnabled())
                 {
@@ -366,17 +369,19 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object left = stack.pop();
         if (left instanceof Neo4jLiteral && right instanceof Neo4jFieldExpression)
         {
-            String field = ((Neo4jFieldExpression)right).getFieldName();
-            Object value = ((Neo4jLiteral)left).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_EQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)right, (Neo4jLiteral)left, Expression.OP_EQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
         else if (left instanceof Neo4jFieldExpression && right instanceof Neo4jLiteral)
         {
-            String field = ((Neo4jFieldExpression)left).getFieldName();
-            Object value = ((Neo4jLiteral)right).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_EQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)left, (Neo4jLiteral)right, Expression.OP_EQ);
+            stack.push(neo4jExpr);
+            return neo4jExpr;
+        }
+        else if (left instanceof Neo4jExpression && right instanceof Neo4jExpression)
+        {
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jExpression)left, (Neo4jExpression)right, Expression.OP_EQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
@@ -395,17 +400,19 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object left = stack.pop();
         if (left instanceof Neo4jLiteral && right instanceof Neo4jFieldExpression)
         {
-            String field = ((Neo4jFieldExpression)right).getFieldName();
-            Object value = ((Neo4jLiteral)left).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_NOTEQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)right, (Neo4jLiteral)left, Expression.OP_NOTEQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
         else if (left instanceof Neo4jFieldExpression && right instanceof Neo4jLiteral)
         {
-            String field = ((Neo4jFieldExpression)left).getFieldName();
-            Object value = ((Neo4jLiteral)right).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_NOTEQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)left, (Neo4jLiteral)right, Expression.OP_NOTEQ);
+            stack.push(neo4jExpr);
+            return neo4jExpr;
+        }
+        else if (left instanceof Neo4jExpression && right instanceof Neo4jExpression)
+        {
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jExpression)left, (Neo4jExpression)right, Expression.OP_NOTEQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
@@ -424,17 +431,13 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object left = stack.pop();
         if (left instanceof Neo4jLiteral && right instanceof Neo4jFieldExpression)
         {
-            String field = ((Neo4jFieldExpression)right).getFieldName();
-            Object value = ((Neo4jLiteral)left).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_LTEQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)right, (Neo4jLiteral)left, Expression.OP_LTEQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
         else if (left instanceof Neo4jFieldExpression && right instanceof Neo4jLiteral)
         {
-            String field = ((Neo4jFieldExpression)left).getFieldName();
-            Object value = ((Neo4jLiteral)right).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_GT);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)left, (Neo4jLiteral)right, Expression.OP_GT);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
@@ -453,17 +456,13 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object left = stack.pop();
         if (left instanceof Neo4jLiteral && right instanceof Neo4jFieldExpression)
         {
-            String field = ((Neo4jFieldExpression)right).getFieldName();
-            Object value = ((Neo4jLiteral)left).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_GTEQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)right, (Neo4jLiteral)left, Expression.OP_GTEQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
         else if (left instanceof Neo4jFieldExpression && right instanceof Neo4jLiteral)
         {
-            String field = ((Neo4jFieldExpression)left).getFieldName();
-            Object value = ((Neo4jLiteral)right).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_LT);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)left, (Neo4jLiteral)right, Expression.OP_LT);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
@@ -482,17 +481,13 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object left = stack.pop();
         if (left instanceof Neo4jLiteral && right instanceof Neo4jFieldExpression)
         {
-            String field = ((Neo4jFieldExpression)right).getFieldName();
-            Object value = ((Neo4jLiteral)left).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_LT);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)right, (Neo4jLiteral)left, Expression.OP_LT);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
         else if (left instanceof Neo4jFieldExpression && right instanceof Neo4jLiteral)
         {
-            String field = ((Neo4jFieldExpression)left).getFieldName();
-            Object value = ((Neo4jLiteral)right).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_GTEQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)left, (Neo4jLiteral)right, Expression.OP_GTEQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
@@ -511,17 +506,13 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object left = stack.pop();
         if (left instanceof Neo4jLiteral && right instanceof Neo4jFieldExpression)
         {
-            String field = ((Neo4jFieldExpression)right).getFieldName();
-            Object value = ((Neo4jLiteral)left).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_GT);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)right, (Neo4jLiteral)left, Expression.OP_GT);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
         else if (left instanceof Neo4jFieldExpression && right instanceof Neo4jLiteral)
         {
-            String field = ((Neo4jFieldExpression)left).getFieldName();
-            Object value = ((Neo4jLiteral)right).getValue();
-            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(field, value, Expression.OP_LTEQ);
+            Neo4jExpression neo4jExpr = new Neo4jBooleanExpression((Neo4jFieldExpression)left, (Neo4jLiteral)right, Expression.OP_LTEQ);
             stack.push(neo4jExpr);
             return neo4jExpr;
         }
@@ -607,7 +598,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             }
             else if (paramValue instanceof Character)
             {
-                Neo4jLiteral lit = new Neo4jLiteral("" + paramValue);
+                Neo4jLiteral lit = new Neo4jLiteral(paramValue);
                 stack.push(lit);
                 precompilable = false;
                 return lit;
@@ -676,28 +667,28 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Expression left = expr.getLeft();
         if (left == null)
         {
-            if (expr.getId().equals(compilation.getCandidateAlias()))
+            /*if (expr.getId().equals(compilation.getCandidateAlias()))
             {
                 // Special case of the candidate
                 Neo4jFieldExpression fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias());
                 stack.push(fieldExpr);
                 return fieldExpr;
-            }
+            }*/
 
-            String fieldName = getFieldNameForPrimary(expr);
-            if (fieldName == null)
+            Neo4jFieldExpression fieldExpr = getFieldNameForPrimary(expr);
+            if (fieldExpr == null)
             {
                 if (compileComponent == CompilationComponent.FILTER)
                 {
                     filterComplete = false;
                 }
-                NucleusLogger.QUERY.debug(">> Primary " + expr +
-                    " is not stored in this Neo4j type, so unexecutable in datastore");
+                NucleusLogger.QUERY.debug(">> Primary " + expr + " is not stored in this Neo4j type, so unexecutable in datastore");
             }
             else
             {
                 // Assume all fields are prefixed by the candidate alias!
-                Neo4jFieldExpression fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias() + "." + fieldName);
+                fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias() + "." + fieldExpr.getFieldName(), fieldExpr.getMemberMetaData(), fieldExpr.getMemberColumnMapping());
+//                Neo4jFieldExpression fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias() + "." + fieldName);
                 stack.push(fieldExpr);
                 return fieldExpr;
             }
@@ -716,7 +707,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Object litValue = expr.getLiteral();
         if (litValue instanceof BigDecimal)
         {
-            // MongoDB can't cope with BigDecimal, so give it a Double
+            // Neo4j can't cope with BigDecimal, so give it a Double
             Neo4jLiteral lit = new Neo4jLiteral(((BigDecimal)litValue).doubleValue());
             stack.push(lit);
             return lit;
@@ -759,17 +750,88 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         // Find object that we invoke on
         Expression invokedExpr = expr.getLeft();
         String operation = expr.getOperation();
-        List args = expr.getArguments();
+        List<Expression> args = expr.getArguments();
+
+        boolean supported = true;
+        Neo4jExpression invokedNeo4jExpr = null;
         if (invokedExpr == null)
         {
             // Static method
         }
+        else if (invokedExpr instanceof PrimaryExpression)
+        {
+            processPrimaryExpression((PrimaryExpression) invokedExpr);
+            invokedNeo4jExpr = stack.pop();
+        }
+        else if (invokedExpr instanceof ParameterExpression)
+        {
+            processParameterExpression((ParameterExpression) invokedExpr);
+            invokedNeo4jExpr = stack.pop();
+        }
         else
         {
-            // Invoke on other expression
+            supported = false;
         }
-        NucleusLogger.QUERY.debug(">> Dont currently support any method invocation in Neo4j datastore queries : method=" + operation + 
-            " args=" + StringUtils.collectionToString(args));
+
+        List<Neo4jExpression> neo4jExprArgs = null;
+        if (supported && args != null)
+        {
+            neo4jExprArgs = new ArrayList<Neo4jExpression>();
+            for (Expression argExpr : args)
+            {
+
+                if (argExpr instanceof PrimaryExpression)
+                {
+                    processPrimaryExpression((PrimaryExpression) argExpr);
+                    neo4jExprArgs.add(stack.pop());
+                }
+                else if (argExpr instanceof ParameterExpression)
+                {
+                    processParameterExpression((ParameterExpression) argExpr);
+                    neo4jExprArgs.add(stack.pop());
+                }
+                else if (argExpr instanceof InvokeExpression)
+                {
+                    processInvokeExpression((InvokeExpression) argExpr);
+                    neo4jExprArgs.add(stack.pop());
+                }
+                else if (argExpr instanceof Literal)
+                {
+                    processLiteral((Literal) argExpr);
+                    neo4jExprArgs.add(stack.pop());
+                }
+                else
+                {
+                    supported = false;
+                    break;
+                }
+            }
+        }
+
+        if (supported)
+        {
+            if (invokedNeo4jExpr instanceof Neo4jFieldExpression)
+            {
+                Neo4jFieldExpression invokedFieldExpr = (Neo4jFieldExpression)invokedNeo4jExpr;
+                if (invokedFieldExpr.getMemberMetaData().getType() == String.class)
+                {
+                    if ("toUpperCase".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jStringExpression("toUpper(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("toLowerCase".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jStringExpression("toLower(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                }
+            }
+        }
+
+        NucleusLogger.QUERY.debug(">> Dont currently support method invocation in Neo4j datastore queries : expr=" + invokedExpr + " method=" + operation + " args=" + StringUtils.collectionToString(args));
         return super.processInvokeExpression(expr);
     }
 
@@ -777,9 +839,9 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
      * Convenience method to return the "field name" in node for this primary.
      * Allows for simple relation fields.
      * @param expr The expression
-     * @return The field name for this primary (or null if not resolvable in this node)
+     * @return The Neo4jFieldExpression for this primary (or null if not resolvable in this node)
      */
-    protected String getFieldNameForPrimary(PrimaryExpression expr)
+    protected Neo4jFieldExpression getFieldNameForPrimary(PrimaryExpression expr)
     {
         List<String> tuples = expr.getTuples();
         if (tuples == null || tuples.isEmpty())
@@ -805,71 +867,86 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             else
             {
                 AbstractMemberMetaData mmd = cmd.getMetaDataForMember(name);
+                if (mmd == null)
+                {
+                    NucleusLogger.QUERY.warn("Attempt to locate PrimaryExpression " + expr + " gave no result! Maybe an unsupported feature?");
+                    return null;
+                }
+
                 RelationType relationType = mmd.getRelationType(ec.getClassLoaderResolver());
                 if (relationType == RelationType.NONE)
                 {
                     if (iter.hasNext())
                     {
-                        throw new NucleusUserException("Query has reference to " +
-                            StringUtils.collectionToString(tuples) + " yet " + name + " is a non-relation field!");
+                        throw new NucleusUserException("Query has reference to " + StringUtils.collectionToString(tuples) + " yet " + name + " is a non-relation field!");
                     }
+
                     if (embMmd != null)
                     {
                         // Get property name for field of embedded object
                         embMmds.add(mmd);
-                        return table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0).getName();
+                        MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(embMmds);
+                        return new Neo4jFieldExpression(table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0).getName(), mmd, mapping);
                     }
-                    return table.getMemberColumnMappingForMember(mmd).getColumn(0).getName();
+
+                    MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
+                    return new Neo4jFieldExpression(table.getMemberColumnMappingForMember(mmd).getColumn(0).getName(), mmd, mapping);
                 }
-
-                boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, 
-                    embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
-
-                if (embedded)
+                else if (RelationType.isRelationSingleValued(relationType))
                 {
-                    if (RelationType.isRelationSingleValued(relationType))
+                    boolean embedded = MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, embMmds.isEmpty() ? null : embMmds.get(embMmds.size()-1));
+                    if (embedded)
                     {
-                        cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
-                        if (embMmd != null)
+                        if (RelationType.isRelationSingleValued(relationType))
                         {
-                            embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
+                            cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
+                            if (embMmd != null)
+                            {
+                                embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
+                            }
+                            else
+                            {
+                                embMmd = mmd;
+                            }
+                            embMmds.add(embMmd);
                         }
-                        else
+                        else if (RelationType.isRelationMultiValued(relationType))
                         {
-                            embMmd = mmd;
+                            throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
                         }
-                        embMmds.add(embMmd);
                     }
-                    else if (RelationType.isRelationMultiValued(relationType))
+                    else
                     {
-                        throw new NucleusUserException("Do not support the querying of embedded collection/map/array fields : " + mmd.getFullFieldName());
+                        // Not embedded
+                        embMmds.clear();
+                        if (relationType == RelationType.ONE_TO_MANY_UNI || relationType == RelationType.ONE_TO_MANY_BI ||
+                                relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
+                        {
+                            if (!iter.hasNext())
+                            {
+                                MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
+                                return new Neo4jFieldExpression(name, mmd, mapping);
+                            }
+
+                            // Need join to another object, not currently supported
+                            throw new NucleusUserException("Do not support query joining to related object at " + mmd.getFullFieldName() + " in " + StringUtils.collectionToString(tuples));
+                        }
+
+                        if (compileComponent == CompilationComponent.FILTER)
+                        {
+                            filterComplete = false;
+                        }
+
+                        NucleusLogger.QUERY.debug("Query has reference to " + StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
+                                " is not persisted into this object, so unexecutable in the datastore");
+                        return null;
                     }
                 }
-                else
+                else if (RelationType.isRelationMultiValued(relationType))
                 {
-                    // Not embedded
-                    embMmds.clear();
-                    if (relationType == RelationType.ONE_TO_MANY_UNI || relationType == RelationType.ONE_TO_MANY_BI ||
-                            relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
-                    {
-                        if (!iter.hasNext())
-                        {
-                            return name;
-                        }
-                        // Need join to another object, not currently supported
-                        throw new NucleusUserException("Do not support query joining to related object at " + 
-                                mmd.getFullFieldName() + " in " + StringUtils.collectionToString(tuples));
-                    }
-
-                    if (compileComponent == CompilationComponent.FILTER)
-                    {
-                        filterComplete = false;
-                    }
-
-                    NucleusLogger.QUERY.debug("Query has reference to " + StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
-                            " is not persisted into this object, so unexecutable in the datastore");
-                    return null;
+                    throw new NucleusUserException("Dont currently support querying of multi-valued fields at " + mmd.getFullFieldName());
                 }
+
                 firstTuple = false;
             }
         }

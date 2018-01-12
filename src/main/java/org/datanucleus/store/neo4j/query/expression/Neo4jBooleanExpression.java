@@ -24,38 +24,32 @@ import org.datanucleus.query.expression.Expression;
  */
 public class Neo4jBooleanExpression extends Neo4jExpression
 {
-    public Neo4jBooleanExpression(String propName, Object value, Expression.Operator op)
+    public Neo4jBooleanExpression(Neo4jFieldExpression fieldExpr, Neo4jLiteral lit, Expression.Operator op)
     {
-        String valueStr = "" + value;
-        if (value != null && value instanceof String)
-        {
-            // Quote any strings
-            valueStr = "\"" + valueStr + "\"";
-        }
-
+        String propName = fieldExpr.getFieldName();
         if (op == Expression.OP_EQ)
         {
-            cypherText = propName + (value == null ? " IS NULL" : " = " + valueStr);
+            cypherText = propName + (lit.getValue() == null ? " IS NULL" : " = " + lit.getCypherText());
         }
         else if (op == Expression.OP_NOTEQ)
         {
-            cypherText = propName + (value == null ? " IS NOT NULL" : " <> " + valueStr);
+            cypherText = propName + (lit.getValue() == null ? " IS NOT NULL" : " <> " + lit.getCypherText());
         }
         else if (op == Expression.OP_GT)
         {
-            cypherText = propName + " > " + valueStr;
+            cypherText = propName + " > " + lit.getCypherText();
         }
         else if (op == Expression.OP_GTEQ)
         {
-            cypherText = propName + " >= " + valueStr;
+            cypherText = propName + " >= " + lit.getCypherText();
         }
         else if (op == Expression.OP_LT)
         {
-            cypherText = propName + " < " + valueStr;
+            cypherText = propName + " < " + lit.getCypherText();
         }
         else if (op == Expression.OP_LTEQ)
         {
-            cypherText = propName + " <= " + valueStr;
+            cypherText = propName + " <= " + lit.getCypherText();
         }
     }
 
@@ -63,11 +57,11 @@ public class Neo4jBooleanExpression extends Neo4jExpression
     {
         if (op == Expression.OP_AND)
         {
-            cypherText = "(" + expr1.cypherText + ") and (" + expr2.cypherText + ")";
+            cypherText = "(" + expr1.getCypherText() + ") and (" + expr2.getCypherText() + ")";
         }
         else if (op == Expression.OP_OR)
         {
-            cypherText = "(" + expr1.cypherText + ") or (" + expr2.cypherText + ")";
+            cypherText = "(" + expr1.getCypherText() + ") or (" + expr2.getCypherText() + ")";
         }
     }
 
@@ -75,7 +69,35 @@ public class Neo4jBooleanExpression extends Neo4jExpression
     {
         if (op == Expression.OP_NOT)
         {
-            cypherText = "not(" + expr.cypherText + ")";
+            cypherText = "not(" + expr.getCypherText() + ")";
+        }
+    }
+
+    public Neo4jBooleanExpression(Neo4jExpression expr1, Neo4jExpression expr2, Expression.Operator op)
+    {
+        if (op == Expression.OP_EQ)
+        {
+            cypherText = expr1.getCypherText() + " = " + expr2.getCypherText();
+        }
+        else if (op == Expression.OP_NOTEQ)
+        {
+            cypherText = expr1.getCypherText() + " <> " + expr2.getCypherText();
+        }
+        else if (op == Expression.OP_GT)
+        {
+            cypherText = expr1.getCypherText() + " > " + expr2.getCypherText();
+        }
+        else if (op == Expression.OP_GTEQ)
+        {
+            cypherText = expr1.getCypherText() + " >= " + expr2.getCypherText();
+        }
+        else if (op == Expression.OP_LT)
+        {
+            cypherText = expr1.getCypherText() + " < " + expr2.getCypherText();
+        }
+        else if (op == Expression.OP_LTEQ)
+        {
+            cypherText = expr1.getCypherText() + " <= " + expr2.getCypherText();
         }
     }
 }

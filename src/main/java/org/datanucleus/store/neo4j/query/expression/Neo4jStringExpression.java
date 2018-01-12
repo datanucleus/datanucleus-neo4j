@@ -1,5 +1,5 @@
 /**********************************************************************
-Copyright (c) 2012 Andy Jefferson and others. All rights reserved.
+Copyright (c) 2018 Andy Jefferson and others. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,32 +18,12 @@ Contributors:
 package org.datanucleus.store.neo4j.query.expression;
 
 /**
- * Representation of a literal in a Neo4j query.
+ * Representation of a String expression in Neo4j queries.
  */
-public class Neo4jLiteral extends Neo4jExpression
+public class Neo4jStringExpression extends Neo4jExpression
 {
-    Object value;
-
-    public Neo4jLiteral(Object value)
+    public Neo4jStringExpression(String cypher)
     {
-        this.value = value;
-        if (value instanceof String)
-        {
-            this.cypherText = "\"" + value + "\"";
-        }
-        else
-        {
-            this.cypherText = toString();
-        }
-    }
-
-    public Object getValue()
-    {
-        return value;
-    }
-
-    public String toString()
-    {
-        return "" + value;
+        cypherText = cypher;
     }
 }
