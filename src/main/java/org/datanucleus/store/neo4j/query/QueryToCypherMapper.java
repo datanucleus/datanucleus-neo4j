@@ -955,8 +955,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                     {
                         // Not embedded
                         embMmds.clear();
-                        if (relationType == RelationType.ONE_TO_MANY_UNI || relationType == RelationType.ONE_TO_MANY_BI ||
-                                relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
+                        if (relationType == RelationType.MANY_TO_ONE_UNI || relationType == RelationType.MANY_TO_ONE_BI)
                         {
                             if (!iter.hasNext())
                             {
