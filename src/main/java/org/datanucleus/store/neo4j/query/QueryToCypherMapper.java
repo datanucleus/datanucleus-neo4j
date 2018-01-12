@@ -746,7 +746,6 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processInvokeExpression(InvokeExpression expr)
     {
-        // TODO Support some method invocations if there is a Neo4j Cypher equivalent
         // Find object that we invoke on
         Expression invokedExpr = expr.getLeft();
         String operation = expr.getOperation();
@@ -826,6 +825,43 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                         Neo4jExpression neo4jExpr = new Neo4jStringExpression("toLower(" + invokedFieldExpr.getCypherText() + ")");
                         stack.push(neo4jExpr);
                         return neo4jExpr;
+                    }
+                    else if ("trimLeft".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jStringExpression("lTrim(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("trimRight".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jStringExpression("rTrim(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("trim".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jStringExpression("trim(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("substring".equals(operation))
+                    {
+                        if (neo4jExprArgs == null || neo4jExprArgs.size() == 0 || neo4jExprArgs.size() > 2)
+                        {
+                            throw new NucleusException("Method String.substring has to have 1 or 2 args");
+                        }
+                        else if (neo4jExprArgs.size() == 1)
+                        {
+                            Neo4jExpression neo4jExpr = new Neo4jStringExpression("substring(" + invokedFieldExpr.getCypherText() + "," + neo4jExprArgs.get(0) + ")");
+                            stack.push(neo4jExpr);
+                            return neo4jExpr;
+                        }
+                        else
+                        {
+                            Neo4jExpression neo4jExpr = new Neo4jStringExpression("substring(" + invokedFieldExpr.getCypherText() + "," + neo4jExprArgs.get(0) + "," + neo4jExprArgs.get(1) + ")");
+                            stack.push(neo4jExpr);
+                            return neo4jExpr;
+                        }
                     }
                 }
             }
