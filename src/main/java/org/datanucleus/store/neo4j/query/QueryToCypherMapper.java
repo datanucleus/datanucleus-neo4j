@@ -667,13 +667,13 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         Expression left = expr.getLeft();
         if (left == null)
         {
-            /*if (expr.getId().equals(compilation.getCandidateAlias()))
+            if (expr.getId().equals(compilation.getCandidateAlias()))
             {
                 // Special case of the candidate
-                Neo4jFieldExpression fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias());
+                Neo4jFieldExpression fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias(), null, null);
                 stack.push(fieldExpr);
                 return fieldExpr;
-            }*/
+            }
 
             Neo4jFieldExpression fieldExpr = getFieldNameForPrimary(expr);
             if (fieldExpr == null)
@@ -682,19 +682,25 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                 {
                     filterComplete = false;
                 }
-                NucleusLogger.QUERY.debug(">> Primary " + expr + " is not stored in this Neo4j type, so unexecutable in datastore");
+                else if (compileComponent == CompilationComponent.ORDERING)
+                {
+                    orderComplete = false;
+                }
+                else if (compileComponent == CompilationComponent.RESULT)
+                {
+                    resultComplete = false;
+                }
+                NucleusLogger.QUERY.warn(">> Primary " + expr + " is not stored in this Neo4j type, so unexecutable in datastore");
             }
             else
             {
-                // Assume all fields are prefixed by the candidate alias!
+                // Assume all fields are prefixed by the candidate alias! TODO When we support fields in related objects then remove this and put in the Neo4jFieldExpression creation
                 fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias() + "." + fieldExpr.getFieldName(), fieldExpr.getMemberMetaData(), fieldExpr.getMemberColumnMapping());
-//                Neo4jFieldExpression fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias() + "." + fieldName);
                 stack.push(fieldExpr);
                 return fieldExpr;
             }
         }
 
-        // TODO Auto-generated method stub
         return super.processPrimaryExpression(expr);
     }
 
@@ -812,8 +818,10 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             if (invokedNeo4jExpr instanceof Neo4jFieldExpression)
             {
                 Neo4jFieldExpression invokedFieldExpr = (Neo4jFieldExpression)invokedNeo4jExpr;
+
                 if (invokedFieldExpr.getMemberMetaData().getType() == String.class)
                 {
+                    // String methods
                     if ("toUpperCase".equals(operation))
                     {
                         Neo4jExpression neo4jExpr = new Neo4jStringExpression("toUpper(" + invokedFieldExpr.getCypherText() + ")");
