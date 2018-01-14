@@ -48,6 +48,7 @@ import org.datanucleus.store.neo4j.query.expression.Neo4jBooleanExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jFieldExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jLiteral;
+import org.datanucleus.store.neo4j.query.expression.Neo4jNumericExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jStringExpression;
 import org.datanucleus.store.query.Query;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
@@ -56,6 +57,8 @@ import org.datanucleus.store.types.SCO;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
+
+import scala.math.Numeric;
 
 /**
  * Mapper to convert a generic query compilation into components for a Neo4j Cypher query.
@@ -870,6 +873,58 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                             stack.push(neo4jExpr);
                             return neo4jExpr;
                         }
+                    }
+                }
+                else if (Numeric.class.isAssignableFrom(invokedFieldExpr.getMemberMetaData().getType()))
+                {
+                    // Numeric methods
+                    if ("Math.cos".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("cos(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.sin".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("sin(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.tan".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("tan(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.acos".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("acos(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.asin".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("asin(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.atan".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("atan(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.toDegrees".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("degrees(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.toRadians".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("radians(" + invokedFieldExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
                     }
                 }
             }

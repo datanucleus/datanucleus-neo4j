@@ -24,6 +24,11 @@ import org.datanucleus.query.expression.Expression;
  */
 public class Neo4jBooleanExpression extends Neo4jExpression
 {
+    public Neo4jBooleanExpression(String cypher)
+    {
+        cypherText = cypher;
+    }
+
     public Neo4jBooleanExpression(Neo4jFieldExpression fieldExpr, Neo4jLiteral lit, Expression.Operator op)
     {
         String propName = fieldExpr.getFieldName();
