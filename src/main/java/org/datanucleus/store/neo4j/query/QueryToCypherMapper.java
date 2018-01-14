@@ -698,7 +698,6 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
             else
             {
                 // Assume all fields are prefixed by the candidate alias! TODO When we support fields in related objects then remove this and put in the Neo4jFieldExpression creation
-                fieldExpr = new Neo4jFieldExpression(compilation.getCandidateAlias() + "." + fieldExpr.getFieldName(), fieldExpr.getMemberMetaData(), fieldExpr.getMemberColumnMapping());
                 stack.push(fieldExpr);
                 return fieldExpr;
             }
@@ -972,6 +971,9 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                     return null;
                 }
 
+                // TODO When we support fields in related objects then set the alias to the related object as appropriate
+                String cmptAlias = compilation.getCandidateAlias();
+
                 RelationType relationType = mmd.getRelationType(ec.getClassLoaderResolver());
                 if (relationType == RelationType.NONE)
                 {
@@ -985,11 +987,11 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                         // Get property name for field of embedded object
                         embMmds.add(mmd);
                         MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(embMmds);
-                        return new Neo4jFieldExpression(table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0).getName(), mmd, mapping);
+                        return new Neo4jFieldExpression(cmptAlias + "." + table.getMemberColumnMappingForEmbeddedMember(embMmds).getColumn(0).getName(), mmd, mapping);
                     }
 
                     MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
-                    return new Neo4jFieldExpression(table.getMemberColumnMappingForMember(mmd).getColumn(0).getName(), mmd, mapping);
+                    return new Neo4jFieldExpression(cmptAlias + "." + table.getMemberColumnMappingForMember(mmd).getColumn(0).getName(), mmd, mapping);
                 }
                 else if (RelationType.isRelationSingleValued(relationType))
                 {
@@ -1023,7 +1025,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                             if (!iter.hasNext())
                             {
                                 MemberColumnMapping mapping = table.getMemberColumnMappingForMember(mmd);
-                                return new Neo4jFieldExpression(name, mmd, mapping);
+                                return new Neo4jFieldExpression(cmptAlias + "." + name, mmd, mapping);
                             }
 
                             // Need join to another object, not currently supported
