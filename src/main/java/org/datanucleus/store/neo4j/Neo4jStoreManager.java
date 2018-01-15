@@ -238,7 +238,7 @@ public class Neo4jStoreManager extends AbstractStoreManager
         String[] filteredClassNames = getNucleusContext().getTypeManager().filterOutSupportedSecondClassNames(classNames);
 
         // Find the ClassMetaData for these classes and all referenced by these classes
-        Set<String> clsNameSet = new HashSet<String>();
+//        Set<String> clsNameSet = new HashSet<String>();
         Iterator iter = getMetaDataManager().getReferencedClasses(filteredClassNames, clr).iterator();
         while (iter.hasNext())
         {
@@ -256,7 +256,7 @@ public class Neo4jStoreManager extends AbstractStoreManager
                         registerStoreData(sd);
                     }
 
-                    clsNameSet.add(cmd.getFullClassName());
+//                    clsNameSet.add(cmd.getFullClassName());
                 }
             }
         }

@@ -237,7 +237,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         while (true)
         {
             Object nextPojo = getNextObject();
-            if (itemsByIndex.size() == (index+1))
+            if (itemsByIndex != null && itemsByIndex.size() == (index+1))
             {
                 return nextPojo;
             }
@@ -390,6 +390,11 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             return other.query == query;
         }
         return StringUtils.toJVMIDString(other).equals(StringUtils.toJVMIDString(this));
+    }
+
+    public int hashCode()
+    {
+        return super.hashCode();
     }
 
     /**

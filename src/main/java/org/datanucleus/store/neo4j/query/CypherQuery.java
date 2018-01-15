@@ -58,7 +58,7 @@ public class CypherQuery extends AbstractJavaQuery
     public CypherQuery(StoreManager storeMgr, ExecutionContext ec, CypherQuery q)
     {
         super(storeMgr, ec);
-        this.cypher = q.cypher;
+        this.cypher = (q != null) ? q.cypher : null;
     }
 
     /**
