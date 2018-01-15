@@ -817,8 +817,70 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
 
         if (supported)
         {
-            if (invokedNeo4jExpr instanceof Neo4jFieldExpression)
+            if (invokedNeo4jExpr == null)
             {
+                // Static method invocation
+                if (operation.startsWith("Math."))
+                {
+                    if (neo4jExprArgs == null || neo4jExprArgs.size() != 1)
+                    {
+                        throw new NucleusException("Method " + operation + " has to have 1 args");
+                    }
+                    Neo4jExpression neo4jArgExpr = neo4jExprArgs.get(0);
+
+                    if ("Math.cos".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("cos(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.sin".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("sin(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.tan".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("tan(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.acos".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("acos(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.asin".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("asin(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.atan".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("atan(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.toDegrees".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("degrees(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("Math.toRadians".equals(operation))
+                    {
+                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("radians(" + neo4jArgExpr.getCypherText() + ")");
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                }
+            }
+            else if (invokedNeo4jExpr instanceof Neo4jFieldExpression)
+            {
+                // Field method invocation
                 Neo4jFieldExpression invokedFieldExpr = (Neo4jFieldExpression)invokedNeo4jExpr;
 
                 if (invokedFieldExpr.getMemberMetaData().getType() == String.class)
@@ -876,55 +938,6 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                 }
                 else if (Numeric.class.isAssignableFrom(invokedFieldExpr.getMemberMetaData().getType()))
                 {
-                    // Numeric methods
-                    if ("Math.cos".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("cos(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.sin".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("sin(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.tan".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("tan(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.acos".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("acos(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.asin".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("asin(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.atan".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("atan(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.toDegrees".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("degrees(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
-                    else if ("Math.toRadians".equals(operation))
-                    {
-                        Neo4jExpression neo4jExpr = new Neo4jNumericExpression("radians(" + invokedFieldExpr.getCypherText() + ")");
-                        stack.push(neo4jExpr);
-                        return neo4jExpr;
-                    }
                 }
             }
         }
