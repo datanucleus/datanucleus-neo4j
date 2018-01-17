@@ -243,7 +243,7 @@ public class LazyLoadQueryResult extends AbstractQueryResult
             }
             if (result == null)
             {
-                throw new IndexOutOfBoundsException("Beyond size of the results (" + itemsByIndex.size() + ")");
+                throw new IndexOutOfBoundsException("Beyond size of the results (" + (itemsByIndex!=null ? itemsByIndex.size() : 0) + ")");
             }
         }
     }
