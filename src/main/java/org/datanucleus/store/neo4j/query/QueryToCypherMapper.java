@@ -58,8 +58,6 @@ import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.NucleusLogger;
 import org.datanucleus.util.StringUtils;
 
-import scala.math.Numeric;
-
 /**
  * Mapper to convert a generic query compilation into components for a Neo4j Cypher query.
  */
@@ -935,9 +933,63 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                             return neo4jExpr;
                         }
                     }
-                }
-                else if (Numeric.class.isAssignableFrom(invokedFieldExpr.getMemberMetaData().getType()))
-                {
+                    else if ("matches".equals(operation)) 
+                    {
+                        if (neo4jExprArgs == null || neo4jExprArgs.size() != 1)
+                        {
+                            throw new NucleusException("Method String.matches has to have 1 arg");
+                        }
+
+                        String propName = invokedFieldExpr.getFieldName();
+                        String value = neo4jExprArgs.get(0).toString();
+                        String cypherText = propName + " =~ '" + value + "'";
+                        Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(cypherText);
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("startsWith".equals(operation))
+                    {
+                        if (neo4jExprArgs == null || neo4jExprArgs.size() != 1)
+                        {
+                            // TODO Support startsWith(String, int)
+                            throw new NucleusException("Method String.startsWith has to have 1 arg; we do not support the method with 2 args currently");
+                        }
+
+                        String propName = invokedFieldExpr.getFieldName();
+                        String value = neo4jExprArgs.get(0).toString();
+                        String cypherText = propName + " STARTS WITH '" + value + "'";
+                        Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(cypherText);
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("endsWith".equals(operation)) 
+                    {
+                        if (neo4jExprArgs == null || neo4jExprArgs.size() != 1) 
+                        {
+                            throw new NucleusException("Method String.endsWith has to have 1 arg");
+                        }
+
+                        String propName = invokedFieldExpr.getFieldName();
+                        String value = neo4jExprArgs.get(0).toString();
+                        String cypherText = propName + " ENDS WITH '" + value + "'";
+                        Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(cypherText);
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
+                    else if ("contains".equals(operation)) 
+                    {
+                        if (neo4jExprArgs == null || neo4jExprArgs.isEmpty() || neo4jExprArgs.size() > 2) 
+                        {
+                            throw new NucleusException("Method String.contains has to have 1 args");
+                        }
+
+                        String propName = invokedFieldExpr.getFieldName();
+                        String value = neo4jExprArgs.get(0).toString();
+                        String cypherText = propName + " =~ '(?i).*" + value + ".*'";
+                        Neo4jExpression neo4jExpr = new Neo4jBooleanExpression(cypherText);
+                        stack.push(neo4jExpr);
+                        return neo4jExpr;
+                    }
                 }
             }
         }
