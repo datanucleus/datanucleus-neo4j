@@ -985,7 +985,7 @@ public class Neo4jUtils
             try
             {
                 Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
-                coll = (Collection<Object>) instanceType.newInstance();
+                coll = (Collection<Object>) instanceType.getDeclaredConstructor().newInstance();
             }
             catch (Exception e)
             {
