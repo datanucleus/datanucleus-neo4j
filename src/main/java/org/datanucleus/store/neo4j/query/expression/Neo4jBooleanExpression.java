@@ -17,7 +17,7 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.neo4j.query.expression;
 
-import org.datanucleus.query.expression.Expression;
+import org.datanucleus.store.query.expression.Expression;
 
 /**
  * Representation of a boolean expression in Neo4j queries.
