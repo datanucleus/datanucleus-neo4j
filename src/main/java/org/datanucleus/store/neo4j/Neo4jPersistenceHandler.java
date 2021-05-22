@@ -638,7 +638,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
             if (propObj == null)
             {
-                throw new NucleusObjectNotFoundException("Datastore object for " + op + " is not found");
+                throw new NucleusObjectNotFoundException("Datastore object not found for id " + IdentityUtils.getPersistableIdentityForId(op.getInternalObjectId()));
             }
 
             // Retrieve the fields required
@@ -706,7 +706,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
                 if (propObj == null)
                 {
-                    throw new NucleusObjectNotFoundException("Object not found for id=" + op.getInternalObjectId());
+                    throw new NucleusObjectNotFoundException("Object not found for id " + IdentityUtils.getPersistableIdentityForId(op.getInternalObjectId()));
                 }
             }
             finally
