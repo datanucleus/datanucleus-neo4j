@@ -50,10 +50,10 @@ import org.datanucleus.store.query.Query;
 import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
+import org.datanucleus.store.types.converters.EnumConversionHelper;
 import org.datanucleus.store.types.converters.TypeConverter;
 import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.NucleusLogger;
-import org.datanucleus.util.TypeConversionHelper;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
@@ -871,7 +871,7 @@ public class Neo4jUtils
         }
         else if (Enum.class.isAssignableFrom(type))
         {
-            return TypeConversionHelper.getStoredValueFromEnum(mmd, fieldRole, (Enum) value);
+            return EnumConversionHelper.getStoredValueFromEnum(mmd, fieldRole, (Enum) value);
         }
 
         // Fallback to built-in type converters
@@ -1026,7 +1026,7 @@ public class Neo4jUtils
         }
         else if (Enum.class.isAssignableFrom(type))
         {
-            return TypeConversionHelper.getEnumForStoredValue(mmd, fieldRole, value, ec.getClassLoaderResolver());
+            return EnumConversionHelper.getEnumForStoredValue(mmd, fieldRole, value, ec.getClassLoaderResolver());
         }
 
         TypeConverter strConv = ec.getTypeManager().getTypeConverterForType(type, String.class);
