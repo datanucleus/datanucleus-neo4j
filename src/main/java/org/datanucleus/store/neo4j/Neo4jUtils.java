@@ -374,7 +374,7 @@ public class Neo4jUtils
         {
             // Restriction on multitenancy discriminator for this tenant
             String propName = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName();
-            String value = ec.getNucleusContext().getTenantId(ec);
+            String value = ec.getTenantId();
             multitenancyText = propName + " = \"" + value + "\"";
             if (filterText != null)
             {

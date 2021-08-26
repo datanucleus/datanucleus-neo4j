@@ -267,7 +267,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         if (ec.getNucleusContext().isClassMultiTenant(cmd))
         {
             // Multi-tenancy discriminator
-            propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName(), ec.getNucleusContext().getTenantId(ec));
+            propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName(), ec.getTenantId());
         }
 
         if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
