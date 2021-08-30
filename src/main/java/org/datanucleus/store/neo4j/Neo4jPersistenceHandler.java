@@ -543,6 +543,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
             }
 
+            // TODO Support SOFT_DELETE
             if (propObj instanceof Node)
             {
                 // Remove all Relationships for this Node

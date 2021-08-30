@@ -240,6 +240,7 @@ public class Neo4jUtils
             Object discVal = cmd.getDiscriminatorValue();
             cypherString.append(" and (pc.").append(propName).append(" = \"").append(discVal).append("\")");
         }
+        // TODO Support MULTITENANCY, SOFTDELETE
 
         cypherString.append(" RETURN pc");
 
