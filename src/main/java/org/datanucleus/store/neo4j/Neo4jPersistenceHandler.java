@@ -40,6 +40,7 @@ import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.StoreFieldManager;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.util.Localiser;
@@ -264,16 +265,22 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             propObj.setProperty(propName, cmd.getDiscriminatorValue());
         }
 
-        if (ec.getNucleusContext().isClassMultiTenant(cmd))
+        Column multitenancyCol = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY);
+        if (multitenancyCol != null)
         {
-            // Multi-tenancy discriminator
-            propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName(), ec.getTenantId());
+            String tenantId = ec.getTenantId();
+            if (tenantId != null)
+            {
+                // Multi-tenancy discriminator
+                propObj.setProperty(multitenancyCol.getName(), tenantId);
+            }
         }
 
-        if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+        Column softDeleteCol = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE);
+        if (softDeleteCol != null)
         {
             // Soft-delete flag
-            propObj.setProperty(table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE).getName(), Boolean.FALSE);
+            propObj.setProperty(softDeleteCol.getName(), Boolean.FALSE);
         }
 
         // Insert non-relation fields

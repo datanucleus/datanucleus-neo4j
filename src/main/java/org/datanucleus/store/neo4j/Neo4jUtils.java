@@ -47,6 +47,7 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.neo4j.query.LazyLoadQueryResult;
 import org.datanucleus.store.query.Query;
+import org.datanucleus.store.schema.table.Column;
 import org.datanucleus.store.schema.table.SurrogateColumnType;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
@@ -370,23 +371,28 @@ public class Neo4jUtils
         boolean multiple = false;
 
         String multitenancyText = null;
-        if (ec.getNucleusContext().isClassMultiTenant(cmd))
+        Column multitenancyCol = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY);
+        if (multitenancyCol != null)
         {
-            // Restriction on multitenancy discriminator for this tenant
-            String propName = table.getSurrogateColumn(SurrogateColumnType.MULTITENANCY).getName();
             String value = ec.getTenantId();
-            multitenancyText = propName + " = \"" + value + "\"";
-            if (filterText != null)
+            if (value != null)
             {
-                multiple = true;
+                // Restriction on multitenancy discriminator for this tenant
+                String propName = multitenancyCol.getName();
+                multitenancyText = propName + " = \"" + value + "\"";
+                if (filterText != null)
+                {
+                    multiple = true;
+                }
             }
         }
 
         String softDeleteText = null;
-        if (table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE) != null)
+        Column softDeleteCol = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE);
+        if (softDeleteCol != null)
         {
             // Restriction on soft-delete flag
-            String propName = table.getSurrogateColumn(SurrogateColumnType.SOFTDELETE).getName();
+            String propName = softDeleteCol.getName();
             softDeleteText = propName + " = \"" + Boolean.FALSE + "\"";
             if (filterText != null)
             {
