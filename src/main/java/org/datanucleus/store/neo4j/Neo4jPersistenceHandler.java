@@ -139,7 +139,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     /**
      * Method that checks for existence of a PropertyContainer for the specified ObjectProvider,
      * and creates it when not existing, setting all properties except for any relation fields.
-     * @param op ObjectProvider
+     * @param op StateManager
      * @param db The GraphDB
      * @return The PropertyContainer
      * @throws NucleusUserException if a property container exists already with this identity or if an error
