@@ -72,16 +72,16 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
         if (mmds.size() == 1 && embmd != null && embmd.getOwnerMember() != null && embmd.getOwnerMember().equals(mmd.getName()))
         {
             // Special case of this member being a link back to the owner. TODO Repeat this for nested and their owners
-            ObjectProvider[] ownerSMs = ec.getOwnersForEmbeddedObjectProvider(op);
+            ObjectProvider[] ownerSMs = ec.getOwnersForEmbeddedObjectProvider(sm);
             if (ownerSMs != null && ownerSMs.length == 1 && value != ownerSMs[0].getObject())
             {
                 // Make sure the owner field is set
-                op.replaceField(fieldNumber, ownerSMs[0].getObject());
+                sm.replaceField(fieldNumber, ownerSMs[0].getObject());
             }
             return;
         }
 
-        ExecutionContext ec = op.getExecutionContext();
+        ExecutionContext ec = sm.getExecutionContext();
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
         if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, lastMmd))
@@ -130,7 +130,7 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                 }
 
                 // Process all fields of the embedded object
-                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
+                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
                 FieldManager ffm = new StoreEmbeddedFieldManager(embSM, propObj, insert, embMmds, table);
                 embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;

@@ -178,7 +178,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
         addPropertyContainerToTypeIndex(db, propObj, cmd, false);
 
-        // Cache the PropertyContainer with the ObjectProvider
+        // Cache the PropertyContainer with StateManager
         sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
 
         if (cmd.pkIsDatastoreAttributed(storeMgr))

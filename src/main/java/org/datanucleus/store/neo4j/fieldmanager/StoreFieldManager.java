@@ -275,7 +275,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
                 }
 
-                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
+                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
                 // TODO Cater for inherited embedded objects (discriminator)
 
                 FieldManager ffm = new StoreEmbeddedFieldManager(embSM, propObj, insert, embMmds, table);
@@ -295,7 +295,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     protected void storeNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Object value)
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
-        ExecutionContext ec = op.getExecutionContext();
+        ExecutionContext ec = sm.getExecutionContext();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
         boolean optional = false;
@@ -357,7 +357,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (!(propObj instanceof Node))
             {
                 // TODO Work out if this is the source or the target
-                throw new NucleusUserException("Object " + op + " is mapped to a Relationship. Not yet supported");
+                throw new NucleusUserException("Object " + sm + " is mapped to a Relationship. Not yet supported");
             }
 
             Node node = (Node)propObj;
@@ -369,7 +369,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
             if (!(propObj instanceof Node))
             {
                 // Any object mapped as a Relationship cannot have multi-value relations, only a source and target
-                throw new NucleusUserException("Object " + op + " is mapped to a Relationship but has field " + 
+                throw new NucleusUserException("Object " + sm + " is mapped to a Relationship but has field " + 
                     mmd.getFullFieldName() + " which is multi-valued. This is illegal");
             }
 
@@ -411,7 +411,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         {
             value = Optional.of(value);
         }
-        SCOUtils.wrapSCOField(op, fieldNumber, value, true);
+        SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
     }
 
     protected void processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value,

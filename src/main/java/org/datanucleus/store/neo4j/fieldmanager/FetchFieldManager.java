@@ -84,7 +84,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         this.propObj = node;
         if (node == null)
         {
-            throw new NucleusException("Attempt to create FetchFieldManager for " + op + " with null Neo4j Node!" +
+            throw new NucleusException("Attempt to create FetchFieldManager for " + sm + " with null Neo4j Node!" +
                 " Generate a testcase that reproduces this and raise an issue");
         }
     }
@@ -197,7 +197,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         if (mmd.getPersistenceModifier() != FieldPersistenceModifier.PERSISTENT)
         {
-            return op.provideField(fieldNumber);
+            return sm.provideField(fieldNumber);
         }
 
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
@@ -222,7 +222,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
                     embMmds.add(mmd);
-                    ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, op, fieldNumber);
+                    ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, sm, fieldNumber);
                     FieldManager ffm = new FetchEmbeddedFieldManager(embSM, propObj, embMmds, table);
                     embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                     return embSM.getObject();
@@ -256,7 +256,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         {
             if (!(propObj instanceof Node))
             {
-                throw new NucleusUserException("Object " + op + " is mapped to a Relationship. Not yet supported");
+                throw new NucleusUserException("Object " + sm + " is mapped to a Relationship. Not yet supported");
             }
 
             Node node = (Node)propObj;
@@ -268,7 +268,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             if (!(propObj instanceof Node))
             {
                 // Any object mapped as a Relationship cannot have multi-value relations, only a source and target
-                throw new NucleusUserException("Object " + op + " is mapped to a Relationship but has field " + 
+                throw new NucleusUserException("Object " + sm + " is mapped to a Relationship but has field " + 
                     mmd.getFullFieldName() + " which is multi-valued. This is illegal");
             }
 
@@ -350,9 +350,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 }
 
                 Object memberValue = conv.toMemberType(valuesArr);
-                if (op != null && memberValue != null)
+                if (sm != null && memberValue != null)
                 {
-                    memberValue = SCOUtils.wrapSCOField(op, fieldNumber, memberValue, true);
+                    memberValue = SCOUtils.wrapSCOField(sm, fieldNumber, memberValue, true);
                 }
                 return memberValue;
             }
@@ -369,9 +369,9 @@ public class FetchFieldManager extends AbstractFetchFieldManager
             {
                 returnValue = (returnValue!=null) ? Optional.of(returnValue) : Optional.empty();
             }
-            if (op != null)
+            if (sm != null)
             {
-                returnValue = SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), returnValue, true);
+                returnValue = SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), returnValue, true);
             }
             return returnValue;
         }
@@ -381,7 +381,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         {
             fieldValue = (fieldValue!=null) ? Optional.of(fieldValue) : Optional.empty();
         }
-        return (op!=null) ? SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), fieldValue, true) : fieldValue;
+        return (sm!=null) ? SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), fieldValue, true) : fieldValue;
     }
 
     protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ExecutionContext ec, ClassLoaderResolver clr, Node node)
@@ -542,10 +542,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 }
             }
 
-            if (op != null)
+            if (sm != null)
             {
                 // Wrap if SCO
-                return SCOUtils.wrapSCOField(op, mmd.getAbsoluteFieldNumber(), coll, false);
+                return SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), coll, false);
             }
             return coll;
         }

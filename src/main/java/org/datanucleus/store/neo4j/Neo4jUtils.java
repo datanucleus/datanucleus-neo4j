@@ -89,7 +89,7 @@ public class Neo4jUtils
         PropertyContainer propObj = getPropertyContainerForObjectId(graphDB, ec, cmd, sm.getInternalObjectId());
         if (propObj != null)
         {
-            // Cache the Node with the ObjectProvider
+            // Cache the Node with StateManager
             sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
         }
         return propObj;
@@ -554,7 +554,7 @@ public class Neo4jUtils
     /**
      * Convenience method to return the POJO that a Node equates to.
      * Checks the caches and, if not found, creates an object and populates the fetch plan values in, storing
-     * the Node in the ObjectProvider "associatedValues" for future reference.
+     * the Node in StateManager "associatedValues" for future reference.
      * @param propObj The Node/Relationship
      * @param cmd Metadata for the class that this is an instance of (or subclass of)
      * @param ec ExecutionContext
@@ -640,7 +640,7 @@ public class Neo4jUtils
                 sm.setVersion(version);
             }
 
-            // Any fields loaded above will not be wrapped since we did not have the ObjectProvider at the point of creating the FetchFieldManager, so wrap them now
+            // Any fields loaded above will not be wrapped since we did not have StateManager at the point of creating the FetchFieldManager, so wrap them now
             sm.replaceAllLoadedSCOFieldsWithWrappers();
         }
 
