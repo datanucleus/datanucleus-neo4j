@@ -71,26 +71,26 @@ public class Neo4jUtils
     /**
      * Method to return the Node/Relationship representing the specified ObjectProvider.
      * @param graphDB Database service
-     * @param op The object provider
+     * @param sm The StateManager
      * @return The Node/Relationship for this ObjectProvider (or null if not found)
      * @throws NucleusException if more than 1 Node/Relationship is found matching this ObjectProvider!
      */
-    public static PropertyContainer getPropertyContainerForObjectProvider(GraphDatabaseService graphDB, ObjectProvider op)
+    public static PropertyContainer getPropertyContainerForObjectProvider(GraphDatabaseService graphDB, ObjectProvider sm)
     {
-        Object val = op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
+        Object val = sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
         if (val != null)
         {
             // Cached with ObjectProvider so return it
             return (PropertyContainer)val;
         }
 
-        AbstractClassMetaData cmd = op.getClassMetaData();
-        ExecutionContext ec = op.getExecutionContext();
-        PropertyContainer propObj = getPropertyContainerForObjectId(graphDB, ec, cmd, op.getInternalObjectId());
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        ExecutionContext ec = sm.getExecutionContext();
+        PropertyContainer propObj = getPropertyContainerForObjectId(graphDB, ec, cmd, sm.getInternalObjectId());
         if (propObj != null)
         {
             // Cache the Node with the ObjectProvider
-            op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
+            sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
         }
         return propObj;
     }
