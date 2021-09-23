@@ -61,9 +61,9 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     /** Node/Relationship that we are populating with properties representing the fields of the POJO. */
     protected PropertyContainer propObj;
 
-    public StoreFieldManager(ObjectProvider op, PropertyContainer propObj, boolean insert, Table table)
+    public StoreFieldManager(ObjectProvider sm, PropertyContainer propObj, boolean insert, Table table)
     {
-        super(op, insert);
+        super(sm, insert);
         this.table = table;
         this.propObj = propObj;
     }
@@ -275,11 +275,11 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
                 }
 
-                ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
+                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
                 // TODO Cater for inherited embedded objects (discriminator)
 
-                FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmds, table);
-                embOP.provideFields(embcmd.getAllMemberPositions(), ffm);
+                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, propObj, insert, embMmds, table);
+                embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
                 return;
             }
             else if (RelationType.isRelationMultiValued(relationType))
@@ -432,13 +432,13 @@ public class StoreFieldManager extends AbstractStoreFieldManager
 
         // 1-1/N-1 Make sure it is persisted and form the relation
         Object valuePC = (value != null ? ec.persistObjectInternal(value, null, -1, -1) : null);
-        ObjectProvider relatedOP = (value != null ? ec.findObjectProvider(valuePC) : null);
+        ObjectProvider relatedSM = (value != null ? ec.findObjectProvider(valuePC) : null);
 
         if (relationType != RelationType.MANY_TO_ONE_BI && mmd.getMappedBy() == null)
         {
             // Only have a Relationship if this side owns the relation
             Node relatedNode = (Node)
-                (value != null ? Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedOP) : null);
+                (value != null ? Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedSM) : null);
 
             boolean hasRelation = false;
             if (!insert)
@@ -520,8 +520,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     if (element != null)
                     {
                         Object elementPC = ec.persistObjectInternal(element, null, -1, -1);
-                        ObjectProvider relatedOP = ec.findObjectProvider(elementPC);
-                        Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedOP);
+                        ObjectProvider relatedSM = ec.findObjectProvider(elementPC);
+                        Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedSM);
                         relNodes.add(relatedNode);
                     }
                     else
@@ -599,8 +599,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     if (element != null)
                     {
                         Object elementPC = ec.persistObjectInternal(element, null, -1, -1);
-                        ObjectProvider relatedOP = ec.findObjectProvider(elementPC);
-                        Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedOP);
+                        ObjectProvider relatedSM = ec.findObjectProvider(elementPC);
+                        Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedSM);
                         relNodes.add(relatedNode);
                     }
                     else
@@ -679,8 +679,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         if (val != null)
                         {
                             Object valPC = ec.persistObjectInternal(val, null, -1, -1);
-                            ObjectProvider relatedOP = ec.findObjectProvider(valPC);
-                            Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedOP);
+                            ObjectProvider relatedSM = ec.findObjectProvider(valPC);
+                            Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedSM);
                             relNodes.add(relatedNode);
                             relKeyValues.add(Neo4jUtils.getStoredValueForField(ec, mmd, key, FieldRole.ROLE_MAP_KEY));
                         }
@@ -773,8 +773,8 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         if (val != null)
                         {
                             Object keyPC = ec.persistObjectInternal(key, null, -1, -1);
-                            ObjectProvider relatedOP = ec.findObjectProvider(keyPC);
-                            Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedOP);
+                            ObjectProvider relatedSM = ec.findObjectProvider(keyPC);
+                            Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForObjectProvider(propObj.getGraphDatabase(), relatedSM);
                             relNodes.add(relatedNode);
                             relValValues.add(Neo4jUtils.getStoredValueForField(ec, mmd, val, FieldRole.ROLE_MAP_VALUE));
                         }

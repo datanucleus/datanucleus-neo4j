@@ -66,12 +66,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
     boolean embedded = false;
 
-    public FetchFieldManager(ObjectProvider op, PropertyContainer node, Table table)
+    public FetchFieldManager(ObjectProvider sm, PropertyContainer node, Table table)
     {
-        super(op);
+        super(sm);
         this.table = table;
         this.propObj = node;
-        if (ec.getOwnersForEmbeddedObjectProvider(op) != null)
+        if (ec.getOwnersForEmbeddedObjectProvider(sm) != null)
         {
             embedded = true;
         }
@@ -222,10 +222,10 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
                     embMmds.add(mmd);
-                    ObjectProvider embOP = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, op, fieldNumber);
-                    FieldManager ffm = new FetchEmbeddedFieldManager(embOP, propObj, embMmds, table);
-                    embOP.replaceFields(embcmd.getAllMemberPositions(), ffm);
-                    return embOP.getObject();
+                    ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, op, fieldNumber);
+                    FieldManager ffm = new FetchEmbeddedFieldManager(embSM, propObj, embMmds, table);
+                    embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
+                    return embSM.getObject();
                 }
                 else if (RelationType.isRelationMultiValued(relationType))
                 {
@@ -656,8 +656,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             if (mmd.getKeyMetaData() != null && mmd.getKeyMetaData().getMappedBy() != null)
                             {
                                 // Key is field of value
-                                ObjectProvider valOP = ec.findObjectProvider(val);
-                                key = valOP.provideField(valCmd.getAbsolutePositionOfMember(mmd.getKeyMetaData().getMappedBy()));
+                                ObjectProvider valSM = ec.findObjectProvider(val);
+                                key = valSM.provideField(valCmd.getAbsolutePositionOfMember(mmd.getKeyMetaData().getMappedBy()));
                             }
                             else
                             {
@@ -691,8 +691,8 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             if (mmd.getValueMetaData() != null && mmd.getValueMetaData().getMappedBy() != null)
                             {
                                 // Value is field of key
-                                ObjectProvider keyOP = ec.findObjectProvider(key);
-                                val = keyOP.provideField(keyCmd.getAbsolutePositionOfMember(mmd.getValueMetaData().getMappedBy()));
+                                ObjectProvider keySM = ec.findObjectProvider(key);
+                                val = keySM.provideField(keyCmd.getAbsolutePositionOfMember(mmd.getValueMetaData().getMappedBy()));
                             }
                             else
                             {

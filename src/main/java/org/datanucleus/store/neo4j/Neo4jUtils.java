@@ -598,22 +598,22 @@ public class Neo4jUtils
 
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
-        ObjectProvider op = ec.findObjectProvider(pc);
+        ObjectProvider sm = ec.findObjectProvider(pc);
 
-        if (op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
+        if (sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
             // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
             // so load the fieldValues from it.
-            op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            op.loadFieldValues(new FieldValues()
+            sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
+            sm.loadFieldValues(new FieldValues()
             {
-                public void fetchFields(ObjectProvider op)
+                public void fetchFields(ObjectProvider sm)
                 {
-                    op.replaceFields(fpMembers, fm);
+                    sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider op)
+                public void fetchNonLoadedFields(ObjectProvider sm)
                 {
-                    op.replaceNonLoadedFields(fpMembers, fm);
+                    sm.replaceNonLoadedFields(fpMembers, fm);
                 }
                 public FetchPlan getFetchPlanForLoading()
                 {
@@ -630,18 +630,18 @@ public class Neo4jUtils
                 {
                     // Get the version from the field value
                     AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                    version = op.provideField(verMmd.getAbsoluteFieldNumber());
+                    version = sm.provideField(verMmd.getAbsoluteFieldNumber());
                 }
                 else
                 {
                     // Get the surrogate version from the datastore
                     version = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                 }
-                op.setVersion(version);
+                sm.setVersion(version);
             }
 
             // Any fields loaded above will not be wrapped since we did not have the ObjectProvider at the point of creating the FetchFieldManager, so wrap them now
-            op.replaceAllLoadedSCOFieldsWithWrappers();
+            sm.replaceAllLoadedSCOFieldsWithWrappers();
         }
 
         return pc;
@@ -662,21 +662,21 @@ public class Neo4jUtils
         Object id = ec.getNucleusContext().getIdentityManager().getDatastoreId(cmd.getFullClassName(), idKey);
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
-        ObjectProvider op = ec.findObjectProvider(pc);
-        if (op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
+        ObjectProvider sm = ec.findObjectProvider(pc);
+        if (sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
             // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created so load the fieldValues from it.
-            op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            final FieldManager fm = new FetchFieldManager(op, propObj, table);
-            op.loadFieldValues(new FieldValues()
+            sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
+            final FieldManager fm = new FetchFieldManager(sm, propObj, table);
+            sm.loadFieldValues(new FieldValues()
             {
-                public void fetchFields(ObjectProvider op)
+                public void fetchFields(ObjectProvider sm)
                 {
-                    op.replaceFields(fpMembers, fm);
+                    sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider op)
+                public void fetchNonLoadedFields(ObjectProvider sm)
                 {
-                    op.replaceNonLoadedFields(fpMembers, fm);
+                    sm.replaceNonLoadedFields(fpMembers, fm);
                 }
                 public FetchPlan getFetchPlanForLoading()
                 {
@@ -692,14 +692,14 @@ public class Neo4jUtils
                 if (vermd.getFieldName() != null)
                 {
                     // Get the version from the field value
-                    version = op.provideField(cmd.getMetaDataForMember(vermd.getFieldName()).getAbsoluteFieldNumber());
+                    version = sm.provideField(cmd.getMetaDataForMember(vermd.getFieldName()).getAbsoluteFieldNumber());
                 }
                 else
                 {
                     // Get the surrogate version from the datastore
                     version = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                 }
-                op.setVersion(version);
+                sm.setVersion(version);
             }
         }
 
@@ -712,7 +712,7 @@ public class Neo4jUtils
         SCOID id = new SCOID(cmd.getFullClassName());
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
-        ObjectProvider op = ec.findObjectProvider(pc);
+        ObjectProvider sm = ec.findObjectProvider(pc);
 
         StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
         if (sd == null)
@@ -722,21 +722,21 @@ public class Neo4jUtils
         }
         Table table = sd.getTable();
 
-        if (op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
+        if (sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
             // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
             // so load the fieldValues from it.
-            op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
-            final FieldManager fm = new FetchFieldManager(op, propObj, table);
-            op.loadFieldValues(new FieldValues()
+            sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
+            final FieldManager fm = new FetchFieldManager(sm, propObj, table);
+            sm.loadFieldValues(new FieldValues()
             {
-                public void fetchFields(ObjectProvider op)
+                public void fetchFields(ObjectProvider sm)
                 {
-                    op.replaceFields(fpMembers, fm);
+                    sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider op)
+                public void fetchNonLoadedFields(ObjectProvider sm)
                 {
-                    op.replaceNonLoadedFields(fpMembers, fm);
+                    sm.replaceNonLoadedFields(fpMembers, fm);
                 }
                 public FetchPlan getFetchPlanForLoading()
                 {
@@ -753,14 +753,14 @@ public class Neo4jUtils
                 {
                     // Get the version from the field value
                     AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                    version = op.provideField(verMmd.getAbsoluteFieldNumber());
+                    version = sm.provideField(verMmd.getAbsoluteFieldNumber());
                 }
                 else
                 {
                     // Get the surrogate version from the datastore
                     version = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
                 }
-                op.setVersion(version);
+                sm.setVersion(version);
             }
         }
         return pc;

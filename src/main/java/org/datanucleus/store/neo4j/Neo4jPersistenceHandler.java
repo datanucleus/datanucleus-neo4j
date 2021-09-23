@@ -61,20 +61,15 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         super(storeMgr);
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StorePersistenceHandler#close()
-     */
+    @Override
     public void close()
     {
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractPersistenceHandler#insertObjects(org.datanucleus.store.ObjectProvider[])
-     */
     @Override
-    public void insertObjects(ObjectProvider... ops)
+    public void insertObjects(ObjectProvider... sms)
     {
-        ExecutionContext ec = ops[0].getExecutionContext();
+        ExecutionContext ec = sms[0].getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
@@ -83,35 +78,35 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.InsertObjects.Start", StringUtils.objectArrayToString(ops)));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.InsertObjects.Start", StringUtils.objectArrayToString(sms)));
             }
 
             // Do initial insert to create PropertyContainers (Node/Relationship)
-            for (ObjectProvider op : ops)
+            for (ObjectProvider sm : sms)
             {
-                insertObjectToPropertyContainer(op, db);
+                insertObjectToPropertyContainer(sm, db);
             }
 
             // Do second pass for relation fields
-            for (ObjectProvider op : ops)
+            for (ObjectProvider sm : sms)
             {
-                AbstractClassMetaData cmd = op.getClassMetaData();
+                AbstractClassMetaData cmd = sm.getClassMetaData();
                 StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
                 if (sd == null)
                 {
-                    storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                    storeMgr.manageClasses(sm.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
                     sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
                 }
                 Table table = sd.getTable();
 
-                PropertyContainer propObj = (PropertyContainer)op.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
+                PropertyContainer propObj = (PropertyContainer)sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
 
                 // Process relation fields
                 int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
                 if (relPositions.length > 0)
                 {
-                    StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
-                    op.provideFields(relPositions, fm);
+                    StoreFieldManager fm = new StoreFieldManager(sm, propObj, true, table);
+                    sm.provideFields(relPositions, fm);
                 }
             }
 
@@ -139,25 +134,25 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     /**
      * Method that checks for existence of a PropertyContainer for the specified ObjectProvider,
      * and creates it when not existing, setting all properties except for any relation fields.
-     * @param op StateManager
+     * @param sm StateManager
      * @param db The GraphDB
      * @return The PropertyContainer
      * @throws NucleusUserException if a property container exists already with this identity or if an error
      *     occurred during persistence.
      */
-    public PropertyContainer insertObjectToPropertyContainer(ObjectProvider op, GraphDatabaseService db)
+    public PropertyContainer insertObjectToPropertyContainer(ObjectProvider sm, GraphDatabaseService db)
     {
-        assertReadOnlyForUpdateOfObject(op);
+        assertReadOnlyForUpdateOfObject(sm);
 
-        AbstractClassMetaData cmd = op.getClassMetaData();
+        AbstractClassMetaData cmd = sm.getClassMetaData();
         if ((cmd.getIdentityType() == IdentityType.APPLICATION || cmd.getIdentityType() == IdentityType.DATASTORE) &&
             !cmd.pkIsDatastoreAttributed(storeMgr))
         {
             // Enforce uniqueness of datastore rows
             try
             {
-                locateObject(op);
-                throw new NucleusUserException(Localiser.msg("Neo4j.Insert.ObjectWithIdAlreadyExists", op.getObjectAsPrintable(), op.getInternalObjectId()));
+                locateObject(sm);
+                throw new NucleusUserException(Localiser.msg("Neo4j.Insert.ObjectWithIdAlreadyExists", sm.getObjectAsPrintable(), sm.getInternalObjectId()));
             }
             catch (NucleusObjectNotFoundException onfe)
             {
@@ -165,11 +160,11 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             }
         }
 
-        ExecutionContext ec = op.getExecutionContext();
+        ExecutionContext ec = sm.getExecutionContext();
         StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         if (sd == null)
         {
-            storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+            storeMgr.manageClasses(sm.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
             sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
         }
         Table table = sd.getTable();
@@ -179,12 +174,12 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         PropertyContainer propObj = db.createNode();
         if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
         {
-            NucleusLogger.DATASTORE_NATIVE.debug("Persisting " + op + " as " + propObj);
+            NucleusLogger.DATASTORE_NATIVE.debug("Persisting " + sm + " as " + propObj);
         }
         addPropertyContainerToTypeIndex(db, propObj, cmd, false);
 
         // Cache the PropertyContainer with the ObjectProvider
-        op.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
+        sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
 
         if (cmd.pkIsDatastoreAttributed(storeMgr))
         {
@@ -193,10 +188,10 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             // Set the identity of the object based on the datastore-generated IDENTITY strategy value
             if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                op.setPostStoreNewObjectId(id);
+                sm.setPostStoreNewObjectId(id);
                 if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithIdentity", op.getObjectAsPrintable(), id));
+                    NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithIdentity", sm.getObjectAsPrintable(), id));
                 }
             }
             else if (cmd.getIdentityType() == IdentityType.APPLICATION)
@@ -212,10 +207,10 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                             // Field type must be Long since Neo4j node id is a long
                             throw new NucleusUserException("Any field using IDENTITY value generation with Neo4j should be of type numeric");
                         }
-                        op.setPostStoreNewObjectId(id);
+                        sm.setPostStoreNewObjectId(id);
                         if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
                         {
-                            NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithIdentity", op.getObjectAsPrintable(), id));
+                            NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithIdentity", sm.getObjectAsPrintable(), id));
                         }
                     }
                 }
@@ -225,7 +220,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
             String propName = table.getSurrogateColumn(SurrogateColumnType.DATASTORE_ID).getName();
-            Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(op.getInternalObjectId());
+            Object key = IdentityUtils.getTargetKeyForDatastoreIdentity(sm.getInternalObjectId());
             propObj.setProperty(propName, key);
         }
 
@@ -235,11 +230,11 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
             {
                 long versionNumber = 1;
-                op.setTransactionalVersion(Long.valueOf(versionNumber));
+                sm.setTransactionalVersion(Long.valueOf(versionNumber));
                 if (NucleusLogger.DATASTORE.isDebugEnabled())
                 {
                     NucleusLogger.DATASTORE.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithVersion",
-                        op.getObjectAsPrintable(), op.getInternalObjectId(), "" + versionNumber));
+                        sm.getObjectAsPrintable(), sm.getInternalObjectId(), "" + versionNumber));
                 }
                 if (vermd.getFieldName() != null)
                 {
@@ -249,7 +244,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                     {
                         verFieldValue = Integer.valueOf((int)versionNumber);
                     }
-                    op.replaceField(verMmd.getAbsoluteFieldNumber(), verFieldValue);
+                    sm.replaceField(verMmd.getAbsoluteFieldNumber(), verFieldValue);
                 }
                 else
                 {
@@ -285,18 +280,16 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
 
         // Insert non-relation fields
         int[] nonRelPositions = cmd.getNonRelationMemberPositions(ec.getClassLoaderResolver());
-        StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
-        op.provideFields(nonRelPositions, fm);
+        StoreFieldManager fm = new StoreFieldManager(sm, propObj, true, table);
+        sm.provideFields(nonRelPositions, fm);
 
         return propObj;
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StorePersistenceHandler#insertObject(org.datanucleus.store.ObjectProvider)
-     */
-    public void insertObject(ObjectProvider op)
+    @Override
+    public void insertObject(ObjectProvider sm)
     {
-        ExecutionContext ec = op.getExecutionContext();
+        ExecutionContext ec = sm.getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
@@ -305,16 +298,16 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Insert.Start", sm.getObjectAsPrintable(), sm.getInternalObjectId()));
             }
 
             // Step 1 : Create PropertyContainer with non-relation fields
-            PropertyContainer propObj = insertObjectToPropertyContainer(op, db);
-            AbstractClassMetaData cmd = op.getClassMetaData();
+            PropertyContainer propObj = insertObjectToPropertyContainer(sm, db);
+            AbstractClassMetaData cmd = sm.getClassMetaData();
             StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             if (sd == null)
             {
-                storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                storeMgr.manageClasses(sm.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
                 sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             }
             Table table = sd.getTable();
@@ -323,8 +316,8 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             int[] relPositions = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
             if (relPositions.length > 0)
             {
-                StoreFieldManager fm = new StoreFieldManager(op, propObj, true, table);
-                op.provideFields(relPositions, fm);
+                StoreFieldManager fm = new StoreFieldManager(sm, propObj, true, table);
+                sm.provideFields(relPositions, fm);
             }
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
@@ -339,8 +332,8 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
         catch (Exception e)
         {
-            NucleusLogger.PERSISTENCE.error("Exception inserting object " + op, e);
-            throw new NucleusDataStoreException("Exception inserting object for " + op, e);
+            NucleusLogger.PERSISTENCE.error("Exception inserting object " + sm, e);
+            throw new NucleusDataStoreException("Exception inserting object for " + sm, e);
         }
         finally
         {
@@ -394,21 +387,19 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StorePersistenceHandler#updateObject(org.datanucleus.store.ObjectProvider, int[])
-     */
-    public void updateObject(ObjectProvider op, int[] fieldNumbers)
+    @Override
+    public void updateObject(ObjectProvider sm, int[] fieldNumbers)
     {
-        assertReadOnlyForUpdateOfObject(op);
+        assertReadOnlyForUpdateOfObject(sm);
 
-        ExecutionContext ec = op.getExecutionContext();
+        ExecutionContext ec = sm.getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService) mconn.getConnection();
 
             long startTime = System.currentTimeMillis();
-            AbstractClassMetaData cmd = op.getClassMetaData();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
                 StringBuilder fieldStr = new StringBuilder();
@@ -420,42 +411,42 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                     }
                     fieldStr.append(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
                 }
-                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Update.Start", op.getObjectAsPrintable(), op.getInternalObjectId(), fieldStr.toString()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Update.Start", sm.getObjectAsPrintable(), sm.getInternalObjectId(), fieldStr.toString()));
             }
 
             StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             if (sd == null)
             {
-                storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                storeMgr.manageClasses(sm.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
                 sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             }
             Table table = sd.getTable();
 
-            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
             if (propObj == null)
             {
                 if (cmd.isVersioned())
                 {
-                    throw new NucleusOptimisticException("Object with id " + op.getInternalObjectId() + 
-                        " and version " + op.getTransactionalVersion() + " no longer present");
+                    throw new NucleusOptimisticException("Object with id " + sm.getInternalObjectId() + 
+                        " and version " + sm.getTransactionalVersion() + " no longer present");
                 }
-                throw new NucleusDataStoreException("Could not find object with id " + op.getInternalObjectId());
+                throw new NucleusDataStoreException("Could not find object with id " + sm.getInternalObjectId());
             }
 
             int[] updatedFieldNums = fieldNumbers;
             if (cmd.isVersioned())
             {
                 // Version object so calculate version to store with
-                Object currentVersion = op.getTransactionalVersion();
+                Object currentVersion = sm.getTransactionalVersion();
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
                 Object nextVersion = ec.getLockManager().getNextVersion(vermd, currentVersion);
-                op.setTransactionalVersion(nextVersion);
+                sm.setTransactionalVersion(nextVersion);
 
                 if (vermd.getFieldName() != null)
                 {
                     // Update the version field value
                     AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
-                    op.replaceField(verMmd.getAbsoluteFieldNumber(), nextVersion);
+                    sm.replaceField(verMmd.getAbsoluteFieldNumber(), nextVersion);
 
                     boolean updatingVerField = false;
                     for (int i=0;i<fieldNumbers.length;i++)
@@ -480,12 +471,12 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            StoreFieldManager fm = new StoreFieldManager(op, propObj, false, table);
-            op.provideFields(updatedFieldNums, fm);
+            StoreFieldManager fm = new StoreFieldManager(sm, propObj, false, table);
+            sm.provideFields(updatedFieldNums, fm);
 
             if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_NATIVE.debug("Updating " + op + " in " + propObj);
+                NucleusLogger.DATASTORE_NATIVE.debug("Updating " + sm + " in " + propObj);
             }
 
             if (ec.getStatistics() != null)
@@ -502,8 +493,8 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
         catch (Exception e)
         {
-            NucleusLogger.PERSISTENCE.error("Exception updating object " + op, e);
-            throw new NucleusDataStoreException("Exception updating object for " + op, e);
+            NucleusLogger.PERSISTENCE.error("Exception updating object " + sm, e);
+            throw new NucleusDataStoreException("Exception updating object for " + sm, e);
         }
         finally
         {
@@ -511,36 +502,34 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StorePersistenceHandler#deleteObject(org.datanucleus.store.ObjectProvider)
-     */
-    public void deleteObject(ObjectProvider op)
+    @Override
+    public void deleteObject(ObjectProvider sm)
     {
         // Check if read-only so update not permitted
-        assertReadOnlyForUpdateOfObject(op);
+        assertReadOnlyForUpdateOfObject(sm);
 
-        AbstractClassMetaData cmd = op.getClassMetaData();
-        ExecutionContext ec = op.getExecutionContext();
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        ExecutionContext ec = sm.getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
 
-            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
             if (propObj == null)
             {
-                throw new NucleusException("Attempt to delete " + op + " yet no Node/Relationship found! See the log for details");
+                throw new NucleusException("Attempt to delete " + sm + " yet no Node/Relationship found! See the log for details");
             }
 
             // Invoke any cascade deletion
-            op.loadUnloadedFields();
+            sm.loadUnloadedFields();
             int[] relMemberPosns = cmd.getRelationMemberPositions(ec.getClassLoaderResolver());
-            op.provideFields(relMemberPosns, new DeleteFieldManager(op, true));
+            sm.provideFields(relMemberPosns, new DeleteFieldManager(sm, true));
 
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Delete.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_PERSIST.debug(Localiser.msg("Neo4j.Delete.Start", sm.getObjectAsPrintable(), sm.getInternalObjectId()));
             }
 
             // TODO Support SOFT_DELETE
@@ -566,7 +555,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 // Delete this object
                 if (NucleusLogger.DATASTORE_NATIVE.isDebugEnabled())
                 {
-                    NucleusLogger.DATASTORE_NATIVE.debug("Deleting " + op + " as " + node);
+                    NucleusLogger.DATASTORE_NATIVE.debug("Deleting " + sm + " as " + node);
                 }
                 node.delete();
             }
@@ -588,8 +577,8 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
         catch (Exception e)
         {
-            NucleusLogger.PERSISTENCE.error("Exception deleting object " + op, e);
-            throw new NucleusDataStoreException("Exception deleting object for " + op, e);
+            NucleusLogger.PERSISTENCE.error("Exception deleting object " + sm, e);
+            throw new NucleusDataStoreException("Exception deleting object for " + sm, e);
         }
         finally
         {
@@ -597,14 +586,12 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StorePersistenceHandler#fetchObject(org.datanucleus.store.ObjectProvider, int[])
-     */
-    public void fetchObject(ObjectProvider op, int[] fieldNumbers)
+    @Override
+    public void fetchObject(ObjectProvider sm, int[] fieldNumbers)
     {
-        AbstractClassMetaData cmd = op.getClassMetaData();
+        AbstractClassMetaData cmd = sm.getClassMetaData();
 
-        ExecutionContext ec = op.getExecutionContext();
+        ExecutionContext ec = sm.getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
         try
         {
@@ -614,8 +601,8 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             {
                 // Debug information about what we are retrieving
                 StringBuilder str = new StringBuilder("Fetching object \"");
-                str.append(op.getObjectAsPrintable()).append("\" (id=");
-                str.append(op.getInternalObjectId()).append(")").append(" fields [");
+                str.append(sm.getObjectAsPrintable()).append("\" (id=");
+                str.append(sm.getInternalObjectId()).append(")").append(" fields [");
                 for (int i=0;i<fieldNumbers.length;i++)
                 {
                     if (i > 0)
@@ -631,43 +618,43 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
             {
-                NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("Neo4j.Fetch.Start", op.getObjectAsPrintable(), op.getInternalObjectId()));
+                NucleusLogger.DATASTORE_RETRIEVE.debug(Localiser.msg("Neo4j.Fetch.Start", sm.getObjectAsPrintable(), sm.getInternalObjectId()));
             }
 
             StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             if (sd == null)
             {
-                storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                storeMgr.manageClasses(sm.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
                 sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
             }
             Table table = sd.getTable();
 
             // Find the Node for this ObjectProvider
-            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
             if (propObj == null)
             {
-                throw new NucleusObjectNotFoundException("Datastore object not found for id " + IdentityUtils.getPersistableIdentityForId(op.getInternalObjectId()));
+                throw new NucleusObjectNotFoundException("Datastore object not found for id " + IdentityUtils.getPersistableIdentityForId(sm.getInternalObjectId()));
             }
 
             // Retrieve the fields required
-            FieldManager fm = new FetchFieldManager(op, propObj, table);
-            op.replaceFields(fieldNumbers, fm);
+            FieldManager fm = new FetchFieldManager(sm, propObj, table);
+            sm.replaceFields(fieldNumbers, fm);
 
-            if (cmd.isVersioned() && op.getTransactionalVersion() == null)
+            if (cmd.isVersioned() && sm.getTransactionalVersion() == null)
             {
                 // No version set, so retrieve it
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
                 if (vermd.getFieldName() != null)
                 {
                     // Version stored in a field
-                    Object datastoreVersion = op.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
-                    op.setVersion(datastoreVersion);
+                    Object datastoreVersion = sm.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
+                    sm.setVersion(datastoreVersion);
                 }
                 else
                 {
                     // Surrogate version
                     Object datastoreVersion = propObj.getProperty(table.getSurrogateColumn(SurrogateColumnType.VERSION).getName());
-                    op.setVersion(datastoreVersion);
+                    sm.setVersion(datastoreVersion);
                 }
             }
 
@@ -691,30 +678,28 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StorePersistenceHandler#locateObject(org.datanucleus.store.ObjectProvider)
-     */
-    public void locateObject(ObjectProvider op)
+    @Override
+    public void locateObject(ObjectProvider sm)
     {
-        final AbstractClassMetaData cmd = op.getClassMetaData();
+        final AbstractClassMetaData cmd = sm.getClassMetaData();
         if (cmd.getIdentityType() == IdentityType.APPLICATION || 
             cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            ExecutionContext ec = op.getExecutionContext();
+            ExecutionContext ec = sm.getExecutionContext();
             ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
             try
             {
                 StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
                 if (sd == null)
                 {
-                    storeMgr.manageClasses(op.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
+                    storeMgr.manageClasses(sm.getExecutionContext().getClassLoaderResolver(), cmd.getFullClassName());
                 }
 
                 GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
-                PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, op);
+                PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
                 if (propObj == null)
                 {
-                    throw new NucleusObjectNotFoundException("Object not found for id " + IdentityUtils.getPersistableIdentityForId(op.getInternalObjectId()));
+                    throw new NucleusObjectNotFoundException("Object not found for id " + IdentityUtils.getPersistableIdentityForId(sm.getInternalObjectId()));
                 }
             }
             finally

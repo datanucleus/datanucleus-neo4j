@@ -43,9 +43,9 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
     /** Metadata for the embedded member (maybe nested) that this FieldManager represents). */
     protected List<AbstractMemberMetaData> mmds;
 
-    public StoreEmbeddedFieldManager(ObjectProvider op, PropertyContainer propObj, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
+    public StoreEmbeddedFieldManager(ObjectProvider sm, PropertyContainer propObj, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
     {
-        super(op, propObj, insert, table);
+        super(sm, propObj, insert, table);
         this.mmds = mmds;
     }
 
@@ -72,11 +72,11 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
         if (mmds.size() == 1 && embmd != null && embmd.getOwnerMember() != null && embmd.getOwnerMember().equals(mmd.getName()))
         {
             // Special case of this member being a link back to the owner. TODO Repeat this for nested and their owners
-            ObjectProvider[] ownerOPs = ec.getOwnersForEmbeddedObjectProvider(op);
-            if (ownerOPs != null && ownerOPs.length == 1 && value != ownerOPs[0].getObject())
+            ObjectProvider[] ownerSMs = ec.getOwnersForEmbeddedObjectProvider(op);
+            if (ownerSMs != null && ownerSMs.length == 1 && value != ownerSMs[0].getObject())
             {
                 // Make sure the owner field is set
-                op.replaceField(fieldNumber, ownerOPs[0].getObject());
+                op.replaceField(fieldNumber, ownerSMs[0].getObject());
             }
             return;
         }
@@ -130,9 +130,9 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                 }
 
                 // Process all fields of the embedded object
-                ObjectProvider embOP = ec.findObjectProviderForEmbedded(value, op, mmd);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embOP, propObj, insert, embMmds, table);
-                embOP.provideFields(embCmd.getAllMemberPositions(), ffm);
+                ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, op, mmd);
+                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, propObj, insert, embMmds, table);
+                embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
                 return;
             }
         }
