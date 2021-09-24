@@ -52,7 +52,7 @@ public class Neo4jStoreManager extends AbstractStoreManager
         Localiser.registerBundle("org.datanucleus.store.neo4j.Localisation", Neo4jStoreManager.class.getClassLoader());
     }
 
-    /** Key used for storing the PropertyContainer in an ObjectProvider associatedValues. */
+    /** Key used for storing the PropertyContainer in an StateManager associatedValues. */
     public static String OBJECT_PROVIDER_PROPCONTAINER = "DN_OP_PROPCONTAINER";
 
     public static String PROPCONTAINER_TYPE_INDEX = "DN_TYPES";

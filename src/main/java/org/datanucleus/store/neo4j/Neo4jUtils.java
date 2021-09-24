@@ -38,7 +38,7 @@ import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.metadata.VersionMetaData;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.FieldValues;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
@@ -69,18 +69,18 @@ import org.neo4j.graphdb.index.IndexHits;
 public class Neo4jUtils
 {
     /**
-     * Method to return the Node/Relationship representing the specified ObjectProvider.
+     * Method to return the Node/Relationship representing the specified StateManager.
      * @param graphDB Database service
      * @param sm The StateManager
-     * @return The Node/Relationship for this ObjectProvider (or null if not found)
-     * @throws NucleusException if more than 1 Node/Relationship is found matching this ObjectProvider!
+     * @return The Node/Relationship for this StateManager (or null if not found)
+     * @throws NucleusException if more than 1 Node/Relationship is found matching this StateManager!
      */
-    public static PropertyContainer getPropertyContainerForObjectProvider(GraphDatabaseService graphDB, ObjectProvider sm)
+    public static PropertyContainer getPropertyContainerForStateManager(GraphDatabaseService graphDB, DNStateManager sm)
     {
         Object val = sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER);
         if (val != null)
         {
-            // Cached with ObjectProvider so return it
+            // Cached with StateManager so return it
             return (PropertyContainer)val;
         }
 
@@ -598,20 +598,20 @@ public class Neo4jUtils
 
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
-        ObjectProvider sm = ec.findObjectProvider(pc);
+        DNStateManager sm = ec.findStateManager(pc);
 
         if (sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
-            // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
+            // The returned StateManager doesn't have this Node/Relationship assigned to it hence must be just created
             // so load the fieldValues from it.
             sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
             sm.loadFieldValues(new FieldValues()
             {
-                public void fetchFields(ObjectProvider sm)
+                public void fetchFields(DNStateManager sm)
                 {
                     sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider sm)
+                public void fetchNonLoadedFields(DNStateManager sm)
                 {
                     sm.replaceNonLoadedFields(fpMembers, fm);
                 }
@@ -662,19 +662,19 @@ public class Neo4jUtils
         Object id = ec.getNucleusContext().getIdentityManager().getDatastoreId(cmd.getFullClassName(), idKey);
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
-        ObjectProvider sm = ec.findObjectProvider(pc);
+        DNStateManager sm = ec.findStateManager(pc);
         if (sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
-            // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created so load the fieldValues from it.
+            // The returned StateManager doesn't have this Node/Relationship assigned to it hence must be just created so load the fieldValues from it.
             sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
             final FieldManager fm = new FetchFieldManager(sm, propObj, table);
             sm.loadFieldValues(new FieldValues()
             {
-                public void fetchFields(ObjectProvider sm)
+                public void fetchFields(DNStateManager sm)
                 {
                     sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider sm)
+                public void fetchNonLoadedFields(DNStateManager sm)
                 {
                     sm.replaceNonLoadedFields(fpMembers, fm);
                 }
@@ -712,7 +712,7 @@ public class Neo4jUtils
         SCOID id = new SCOID(cmd.getFullClassName());
         Class type = ec.getClassLoaderResolver().classForName(cmd.getFullClassName());
         Object pc = ec.findObject(id, false, false, type.getName());
-        ObjectProvider sm = ec.findObjectProvider(pc);
+        DNStateManager sm = ec.findStateManager(pc);
 
         StoreData sd = ec.getStoreManager().getStoreDataForClass(cmd.getFullClassName());
         if (sd == null)
@@ -724,17 +724,17 @@ public class Neo4jUtils
 
         if (sm.getAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER) == null)
         {
-            // The returned ObjectProvider doesn't have this Node/Relationship assigned to it hence must be just created
+            // The returned StateManager doesn't have this Node/Relationship assigned to it hence must be just created
             // so load the fieldValues from it.
             sm.setAssociatedValue(Neo4jStoreManager.OBJECT_PROVIDER_PROPCONTAINER, propObj);
             final FieldManager fm = new FetchFieldManager(sm, propObj, table);
             sm.loadFieldValues(new FieldValues()
             {
-                public void fetchFields(ObjectProvider sm)
+                public void fetchFields(DNStateManager sm)
                 {
                     sm.replaceFields(fpMembers, fm);
                 }
-                public void fetchNonLoadedFields(ObjectProvider sm)
+                public void fetchNonLoadedFields(DNStateManager sm)
                 {
                     sm.replaceNonLoadedFields(fpMembers, fm);
                 }

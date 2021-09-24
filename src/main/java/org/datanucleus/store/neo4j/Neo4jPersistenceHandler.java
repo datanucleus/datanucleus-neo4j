@@ -31,7 +31,7 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
@@ -67,7 +67,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     @Override
-    public void insertObjects(ObjectProvider... sms)
+    public void insertObjects(DNStateManager... sms)
     {
         ExecutionContext ec = sms[0].getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
@@ -82,13 +82,13 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             }
 
             // Do initial insert to create PropertyContainers (Node/Relationship)
-            for (ObjectProvider sm : sms)
+            for (DNStateManager sm : sms)
             {
                 insertObjectToPropertyContainer(sm, db);
             }
 
             // Do second pass for relation fields
-            for (ObjectProvider sm : sms)
+            for (DNStateManager sm : sms)
             {
                 AbstractClassMetaData cmd = sm.getClassMetaData();
                 StoreData sd = storeMgr.getStoreDataForClass(cmd.getFullClassName());
@@ -132,7 +132,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     /**
-     * Method that checks for existence of a PropertyContainer for the specified ObjectProvider,
+     * Method that checks for existence of a PropertyContainer for the specified StateManager,
      * and creates it when not existing, setting all properties except for any relation fields.
      * @param sm StateManager
      * @param db The GraphDB
@@ -140,7 +140,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
      * @throws NucleusUserException if a property container exists already with this identity or if an error
      *     occurred during persistence.
      */
-    public PropertyContainer insertObjectToPropertyContainer(ObjectProvider sm, GraphDatabaseService db)
+    public PropertyContainer insertObjectToPropertyContainer(DNStateManager sm, GraphDatabaseService db)
     {
         assertReadOnlyForUpdateOfObject(sm);
 
@@ -287,7 +287,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     @Override
-    public void insertObject(ObjectProvider sm)
+    public void insertObject(DNStateManager sm)
     {
         ExecutionContext ec = sm.getExecutionContext();
         ManagedConnection mconn = storeMgr.getConnectionManager().getConnection(ec);
@@ -388,7 +388,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     @Override
-    public void updateObject(ObjectProvider sm, int[] fieldNumbers)
+    public void updateObject(DNStateManager sm, int[] fieldNumbers)
     {
         assertReadOnlyForUpdateOfObject(sm);
 
@@ -422,7 +422,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             }
             Table table = sd.getTable();
 
-            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForStateManager(db, sm);
             if (propObj == null)
             {
                 if (cmd.isVersioned())
@@ -503,7 +503,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     @Override
-    public void deleteObject(ObjectProvider sm)
+    public void deleteObject(DNStateManager sm)
     {
         // Check if read-only so update not permitted
         assertReadOnlyForUpdateOfObject(sm);
@@ -515,7 +515,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         {
             GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
 
-            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForStateManager(db, sm);
             if (propObj == null)
             {
                 throw new NucleusException("Attempt to delete " + sm + " yet no Node/Relationship found! See the log for details");
@@ -587,7 +587,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     @Override
-    public void fetchObject(ObjectProvider sm, int[] fieldNumbers)
+    public void fetchObject(DNStateManager sm, int[] fieldNumbers)
     {
         AbstractClassMetaData cmd = sm.getClassMetaData();
 
@@ -629,8 +629,8 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             }
             Table table = sd.getTable();
 
-            // Find the Node for this ObjectProvider
-            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
+            // Find the Node for this StateManager
+            PropertyContainer propObj = Neo4jUtils.getPropertyContainerForStateManager(db, sm);
             if (propObj == null)
             {
                 throw new NucleusObjectNotFoundException("Datastore object not found for id " + IdentityUtils.getPersistableIdentityForId(sm.getInternalObjectId()));
@@ -679,7 +679,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
     }
 
     @Override
-    public void locateObject(ObjectProvider sm)
+    public void locateObject(DNStateManager sm)
     {
         final AbstractClassMetaData cmd = sm.getClassMetaData();
         if (cmd.getIdentityType() == IdentityType.APPLICATION || 
@@ -696,7 +696,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 }
 
                 GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
-                PropertyContainer propObj = Neo4jUtils.getPropertyContainerForObjectProvider(db, sm);
+                PropertyContainer propObj = Neo4jUtils.getPropertyContainerForStateManager(db, sm);
                 if (propObj == null)
                 {
                     throw new NucleusObjectNotFoundException("Object not found for id " + IdentityUtils.getPersistableIdentityForId(sm.getInternalObjectId()));

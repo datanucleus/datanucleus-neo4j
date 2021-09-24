@@ -39,7 +39,7 @@ import org.datanucleus.metadata.FieldPersistenceModifier;
 import org.datanucleus.metadata.FieldRole;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
-import org.datanucleus.state.ObjectProvider;
+import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.neo4j.Neo4jStoreManager;
@@ -66,12 +66,12 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
     boolean embedded = false;
 
-    public FetchFieldManager(ObjectProvider sm, PropertyContainer node, Table table)
+    public FetchFieldManager(DNStateManager sm, PropertyContainer node, Table table)
     {
         super(sm);
         this.table = table;
         this.propObj = node;
-        if (ec.getOwnersForEmbeddedObjectProvider(sm) != null)
+        if (ec.getOwnersForEmbeddedStateManager(sm) != null)
         {
             embedded = true;
         }
@@ -222,7 +222,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
                     embMmds.add(mmd);
-                    ObjectProvider embSM = ec.getNucleusContext().getObjectProviderFactory().newForEmbedded(ec, embcmd, sm, fieldNumber);
+                    DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embcmd, sm, fieldNumber);
                     FieldManager ffm = new FetchEmbeddedFieldManager(embSM, propObj, embMmds, table);
                     embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                     return embSM.getObject();
@@ -656,7 +656,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             if (mmd.getKeyMetaData() != null && mmd.getKeyMetaData().getMappedBy() != null)
                             {
                                 // Key is field of value
-                                ObjectProvider valSM = ec.findObjectProvider(val);
+                                DNStateManager valSM = ec.findStateManager(val);
                                 key = valSM.provideField(valCmd.getAbsolutePositionOfMember(mmd.getKeyMetaData().getMappedBy()));
                             }
                             else
@@ -691,7 +691,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                             if (mmd.getValueMetaData() != null && mmd.getValueMetaData().getMappedBy() != null)
                             {
                                 // Value is field of key
-                                ObjectProvider keySM = ec.findObjectProvider(key);
+                                DNStateManager keySM = ec.findStateManager(key);
                                 val = keySM.provideField(keyCmd.getAbsolutePositionOfMember(mmd.getValueMetaData().getMappedBy()));
                             }
                             else
