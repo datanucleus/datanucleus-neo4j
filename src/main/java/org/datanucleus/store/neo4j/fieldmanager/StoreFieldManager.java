@@ -295,7 +295,6 @@ public class StoreFieldManager extends AbstractStoreFieldManager
     protected void storeNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Object value)
     {
         int fieldNumber = mmd.getAbsoluteFieldNumber();
-        ExecutionContext ec = sm.getExecutionContext();
         MemberColumnMapping mapping = getColumnMapping(fieldNumber);
 
         boolean optional = false;
@@ -360,8 +359,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                 throw new NucleusUserException("Object " + sm + " is mapped to a Relationship. Not yet supported");
             }
 
-            Node node = (Node)propObj;
-            processSingleValuedRelationForNode(mmd, relationType, value, ec, clr, node);
+            processSingleValuedRelationForNode(mmd, relationType, value, clr, (Node)propObj);
             return;
         }
         else if (RelationType.isRelationMultiValued(relationType))
@@ -373,8 +371,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     mmd.getFullFieldName() + " which is multi-valued. This is illegal");
             }
 
-            Node node = (Node)propObj;
-            processMultiValuedRelationForNode(mmd, relationType, value, ec, clr, node);
+            processMultiValuedRelationForNode(mmd, relationType, value, clr, (Node)propObj);
         }
         else
         {
@@ -414,8 +411,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         SCOUtils.wrapSCOField(sm, fieldNumber, value, true);
     }
 
-    protected void processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value,
-            ExecutionContext ec, ClassLoaderResolver clr, Node node)
+    protected void processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value, ClassLoaderResolver clr, Node node)
     {
         if (!mmd.isCascadePersist())
         {
@@ -479,8 +475,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
     }
 
-    protected void processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value,
-            ExecutionContext ec, ClassLoaderResolver clr, Node node)
+    protected void processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, Object value, ClassLoaderResolver clr, Node node)
     {
         if (mmd.hasCollection())
         {

@@ -259,8 +259,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                 throw new NucleusUserException("Object " + sm + " is mapped to a Relationship. Not yet supported");
             }
 
-            Node node = (Node)propObj;
-            Object value = processSingleValuedRelationForNode(mmd, relationType, ec, clr, node);
+            Object value = processSingleValuedRelationForNode(mmd, relationType, clr, (Node)propObj);
             return optional ? (value!=null ? Optional.of(value) : Optional.empty()) : value;
         }
         else if (RelationType.isRelationMultiValued(relationType))
@@ -272,8 +271,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
                     mmd.getFullFieldName() + " which is multi-valued. This is illegal");
             }
 
-            Node node = (Node)propObj;
-            return processMultiValuedRelationForNode(mmd, relationType, ec, clr, node);
+            return processMultiValuedRelationForNode(mmd, relationType, clr, (Node)propObj);
         }
 
         String propName = mapping.getColumn(0).getName(); // TODO Support multicol members
@@ -384,7 +382,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return (sm!=null) ? SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), fieldValue, true) : fieldValue;
     }
 
-    protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ExecutionContext ec, ClassLoaderResolver clr, Node node)
+    protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Node node)
     {
         RelationshipType type = DNRelationshipType.SINGLE_VALUED;
         if (relationType == RelationType.MANY_TO_ONE_BI)
@@ -439,7 +437,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         return null;
     }
 
-    protected Object processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ExecutionContext ec, ClassLoaderResolver clr, Node node)
+    protected Object processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Node node)
     {
         if (mmd.hasCollection())
         {
