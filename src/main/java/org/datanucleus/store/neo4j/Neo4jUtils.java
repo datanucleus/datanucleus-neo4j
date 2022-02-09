@@ -1069,8 +1069,7 @@ public class Neo4jUtils
         AbstractMemberMetaData embMmd = null;
         if (embmd != null)
         {
-            AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-            embMmd = embmmds[fieldNumber];
+            embMmd = embmd.getMemberMetaData().get(fieldNumber);
         }
 
         if (embMmd != null)

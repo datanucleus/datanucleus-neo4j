@@ -1068,7 +1068,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
                             cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), ec.getClassLoaderResolver());
                             if (embMmd != null)
                             {
-                                embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
+                                embMmd = embMmd.getEmbeddedMetaData().getMemberMetaData().get(mmd.getAbsoluteFieldNumber());
                             }
                             else
                             {
