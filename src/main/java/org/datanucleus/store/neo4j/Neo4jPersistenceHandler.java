@@ -227,7 +227,7 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
         if (cmd.isVersioned())
         {
             VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-            if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+            if (vermd.getStrategy() == VersionStrategy.VERSION_NUMBER)
             {
                 long versionNumber = 1;
                 sm.setTransactionalVersion(Long.valueOf(versionNumber));
@@ -236,9 +236,9 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                     NucleusLogger.DATASTORE.debug(Localiser.msg("Neo4j.Insert.ObjectPersistedWithVersion",
                         sm.getObjectAsPrintable(), sm.getInternalObjectId(), "" + versionNumber));
                 }
-                if (vermd.getFieldName() != null)
+                if (vermd.getMemberName() != null)
                 {
-                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                     Object verFieldValue = Long.valueOf(versionNumber);
                     if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
                     {
@@ -442,10 +442,10 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
                 Object nextVersion = ec.getLockManager().getNextVersion(vermd, currentVersion);
                 sm.setTransactionalVersion(nextVersion);
 
-                if (vermd.getFieldName() != null)
+                if (vermd.getMemberName() != null)
                 {
                     // Update the version field value
-                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getMemberName());
                     sm.replaceField(verMmd.getAbsoluteFieldNumber(), nextVersion);
 
                     boolean updatingVerField = false;
@@ -644,10 +644,10 @@ public class Neo4jPersistenceHandler extends AbstractPersistenceHandler
             {
                 // No version set, so retrieve it
                 VersionMetaData vermd = cmd.getVersionMetaDataForClass();
-                if (vermd.getFieldName() != null)
+                if (vermd.getMemberName() != null)
                 {
                     // Version stored in a field
-                    Object datastoreVersion = sm.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
+                    Object datastoreVersion = sm.provideField(cmd.getAbsolutePositionOfMember(vermd.getMemberName()));
                     sm.setVersion(datastoreVersion);
                 }
                 else
