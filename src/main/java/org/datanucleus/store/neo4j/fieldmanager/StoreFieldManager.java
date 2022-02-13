@@ -275,7 +275,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
                 }
 
-                DNStateManager embSM = ec.findStateManagerForEmbedded(value, sm, mmd);
+                DNStateManager embSM = ec.findStateManagerForEmbedded(value, sm, mmd, null);
                 // TODO Cater for inherited embedded objects (discriminator)
 
                 FieldManager ffm = new StoreEmbeddedFieldManager(embSM, propObj, insert, embMmds, table);
