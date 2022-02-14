@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
+import org.datanucleus.PersistableObjectType;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.exceptions.ReachableObjectNotCascadedException;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -427,7 +428,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
         }
 
         // 1-1/N-1 Make sure it is persisted and form the relation
-        Object valuePC = (value != null ? ec.persistObjectInternal(value, null, -1, -1) : null);
+        Object valuePC = (value != null ? ec.persistObjectInternal(value, null, -1, PersistableObjectType.PC) : null);
         DNStateManager relatedSM = (value != null ? ec.findStateManager(valuePC) : null);
 
         if (relationType != RelationType.MANY_TO_ONE_BI && mmd.getMappedBy() == null)
@@ -514,7 +515,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = collIter.next();
                     if (element != null)
                     {
-                        Object elementPC = ec.persistObjectInternal(element, null, -1, -1);
+                        Object elementPC = ec.persistObjectInternal(element, null, -1, PersistableObjectType.PC);
                         DNStateManager relatedSM = ec.findStateManager(elementPC);
                         Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForStateManager(propObj.getGraphDatabase(), relatedSM);
                         relNodes.add(relatedNode);
@@ -593,7 +594,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                     Object element = Array.get(value, i);
                     if (element != null)
                     {
-                        Object elementPC = ec.persistObjectInternal(element, null, -1, -1);
+                        Object elementPC = ec.persistObjectInternal(element, null, -1, PersistableObjectType.PC);
                         DNStateManager relatedSM = ec.findStateManager(elementPC);
                         Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForStateManager(propObj.getGraphDatabase(), relatedSM);
                         relNodes.add(relatedNode);
@@ -673,7 +674,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         Object val = entry.getValue();
                         if (val != null)
                         {
-                            Object valPC = ec.persistObjectInternal(val, null, -1, -1);
+                            Object valPC = ec.persistObjectInternal(val, null, -1, PersistableObjectType.PC);
                             DNStateManager relatedSM = ec.findStateManager(valPC);
                             Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForStateManager(propObj.getGraphDatabase(), relatedSM);
                             relNodes.add(relatedNode);
@@ -767,7 +768,7 @@ public class StoreFieldManager extends AbstractStoreFieldManager
                         Object val = entry.getValue();
                         if (val != null)
                         {
-                            Object keyPC = ec.persistObjectInternal(key, null, -1, -1);
+                            Object keyPC = ec.persistObjectInternal(key, null, -1, PersistableObjectType.PC);
                             DNStateManager relatedSM = ec.findStateManager(keyPC);
                             Node relatedNode = (Node)Neo4jUtils.getPropertyContainerForStateManager(propObj.getGraphDatabase(), relatedSM);
                             relNodes.add(relatedNode);
