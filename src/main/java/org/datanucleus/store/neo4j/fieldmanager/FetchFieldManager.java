@@ -30,6 +30,7 @@ import java.util.Map.Entry;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
+import org.datanucleus.PersistableObjectType;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
@@ -222,7 +223,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
 
                     List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
                     embMmds.add(mmd);
-                    DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embcmd, sm, fieldNumber, null);
+                    DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embcmd, sm, fieldNumber, PersistableObjectType.EMBEDDED_PC);
                     FieldManager ffm = new FetchEmbeddedFieldManager(embSM, propObj, embMmds, table);
                     embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                     return embSM.getObject();
