@@ -72,10 +72,7 @@ public class FetchFieldManager extends AbstractFetchFieldManager
         super(sm);
         this.table = table;
         this.propObj = node;
-        if (ec.getOwnersForEmbeddedStateManager(sm) != null)
-        {
-            embedded = true;
-        }
+        this.embedded = sm.isEmbedded();
     }
 
     public FetchFieldManager(ExecutionContext ec, PropertyContainer node, AbstractClassMetaData cmd, Table table)
