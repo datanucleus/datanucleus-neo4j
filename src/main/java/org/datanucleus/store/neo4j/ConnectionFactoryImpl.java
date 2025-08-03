@@ -1,29 +1,10 @@
-/**********************************************************************
-Copyright (c) 2012 Andy Jefferson and others. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-Contributors:
-    ...
-**********************************************************************/
 package org.datanucleus.store.neo4j;
 
 import java.io.File;
 import java.util.Map;
-
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
-
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusException;
@@ -38,263 +19,140 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 
-/**
- * Implementation of a ConnectionFactory for Neo4j.
- * Accepts a URL of the form 
- * <pre>neo4j:{db_path}</pre>
- * If {db_path} is not specified then will use "datanucleus" as the DB_PATH.
- * Obtains the GraphDbService when initialising the ConnectionFactory and starts/finishes transactions for
- * each ExecutionContext. In Neo4j a thread has its own transaction which doesn't map directly onto
- * an ExecutionContext
- */
-public class ConnectionFactoryImpl extends AbstractConnectionFactory
-{
-    GraphDatabaseService graphDB;
+public class ConnectionFactoryImpl extends AbstractConnectionFactory {
+    private final boolean isRemote;
+    private final BoltConnectionFactoryImpl boltFactoryDelegate;
+    private GraphDatabaseService graphDB;
 
-    /**
-     * Constructor.
-     * @param storeMgr Store Manager
-     * @param resourceType Type of resource (tx, nontx)
-     */
-    public ConnectionFactoryImpl(StoreManager storeMgr, String resourceType)
-    {
+    public ConnectionFactoryImpl(StoreManager storeMgr, String resourceType) {
         super(storeMgr, resourceType);
-
-        // "neo4j:[db_path]"
         String url = storeMgr.getConnectionURL();
-        if (url == null)
-        {
-            throw new NucleusException("You haven't specified persistence property '" + PropertyNames.PROPERTY_CONNECTION_URL + "' (or alias)");
+        if (url != null && (url.toLowerCase().contains("bolt"))) {
+            this.isRemote = true;
+            this.boltFactoryDelegate = new BoltConnectionFactoryImpl(storeMgr, resourceType);
+        } else {
+            this.isRemote = false;
+            this.boltFactoryDelegate = null;
         }
+    }
 
+    public ManagedConnection createManagedConnection(ExecutionContext ec, Map options) {
+        if (isRemote) {
+            return boltFactoryDelegate.createManagedConnection(ec, options);
+        } else {
+            initialiseGraphDB(); 
+            return new ManagedConnectionImpl();
+        }
+    }
+
+    private synchronized void initialiseGraphDB() {
+        if (graphDB != null) return;
+        String url = storeMgr.getConnectionURL();
+        if (url == null) throw new NucleusException("You haven't specified persistence property '" + PropertyNames.PROPERTY_CONNECTION_URL + "'");
         String remains = url.substring(6).trim();
-        if (remains.indexOf(':') == 0)
-        {
-            remains = remains.substring(1);
-        }
-
-        // Assumed to be DB_PATH
+        if (remains.indexOf(':') == 0) remains = remains.substring(1);
         String dbName = "DataNucleus";
-        if (remains.length() > 0)
-        {
-            dbName = remains;
-        }
-        if (dbName.startsWith("http:"))
-        {
-            // TODO Support java-rest-binding to connect to remote databases
-            throw new NucleusException("Neo4j database name starts with http - do not currently support connecting to remote databases");
-        }
-
+        if (remains.length() > 0) dbName = remains;
         GraphDatabaseFactory factory = new GraphDatabaseFactory();
         String propsFileName = storeMgr.getStringProperty("datanucleus.ConnectionPropertiesFile");
-        try
-        {
-            if (StringUtils.isWhitespace(propsFileName))
-            {
-                NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB with name " + dbName);
+        try {
+            if (StringUtils.isWhitespace(propsFileName)) {
                 graphDB = factory.newEmbeddedDatabase(new File(dbName));
-            }
-            else
-            {
+            } else {
                 File propsFile = new File(propsFileName);
-                if (!propsFile.exists())
-                {
-                    NucleusLogger.CONNECTION.debug("Connection properties file " + propsFileName + " doesn't exist! Starting Neo4j Embedded GraphDB using defaults");
+                if (!propsFile.exists()) {
                     graphDB = factory.newEmbeddedDatabase(new File(dbName));
-                }
-                else
-                {
-                    NucleusLogger.CONNECTION.debug("Starting Neo4j Embedded GraphDB using properties from file " + propsFileName);
+                } else {
                     graphDB = factory.newEmbeddedDatabaseBuilder(new File(dbName)).loadPropertiesFromFile(propsFileName).newGraphDatabase();
                 }
             }
+        } catch (Exception e) {
+            throw new NucleusException("Exception creating embedded Neo4j database", e);
         }
-        catch (Exception e)
-        {
-            NucleusLogger.CONNECTION.error("Exception was thrown when connecting to Neo4j embedded database", e);
-            throw e;
-        }
-
-        Runtime.getRuntime().addShutdownHook(new Thread()
-        {
-            @Override
-            public void run()
-            {
-                NucleusLogger.CONNECTION.debug("Shutting down Neo4j Embedded GraphDB via shutdown hook");
-                graphDB.shutdown();
-            }
-        });
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> graphDB.shutdown()));
     }
 
-    public void close()
-    {
-        if (graphDB != null)
-        {
-            NucleusLogger.CONNECTION.debug("Shutting down Neo4j Embedded GraphDB at close of StoreManager");
+    public void close() {
+        if (boltFactoryDelegate != null) { /* Delegate handles its own closing */ }
+        if (graphDB != null) {
             graphDB.shutdown();
         }
         super.close();
     }
 
-    /**
-     * Obtain a connection from the Factory. The connection will be enlisted within the transaction
-     * associated to the ExecutionContext
-     * @param ec the pool that is bound the connection during its lifecycle (or null)
-     * @param options Any options for creating the connection
-     * @return the {@link org.datanucleus.store.connection.ManagedConnection}
-     */
-    public ManagedConnection createManagedConnection(ExecutionContext ec, Map options)
-    {
-        return new ManagedConnectionImpl();
-    }
-
-    public class ManagedConnectionImpl extends AbstractManagedConnection
-    {
+    public class ManagedConnectionImpl extends AbstractManagedConnection {
         Transaction graphTx;
         XAResource xaRes = null;
-
-        public ManagedConnectionImpl()
-        {
-        }
-
-        /* (non-Javadoc)
-         * @see org.datanucleus.store.connection.AbstractManagedConnection#closeAfterTransactionEnd()
-         */
+        public ManagedConnectionImpl() {}
         @Override
-        public boolean closeAfterTransactionEnd()
-        {
-            // Don't call close() immediately after transaction commit/rollback/end since we want to
-            // hang on to the connection until the ExecutionContext ends
-            return false;
-        }
-
-        protected void obtainNewConnection()
-        {
-            if (conn == null)
-            {
-                // Set the "connection" to the graphDB, and start its transaction
+        public boolean closeAfterTransactionEnd() { return false; }
+        protected void obtainNewConnection() {
+            if (conn == null) {
                 conn = graphDB;
                 graphTx = graphDB.beginTx();
-                NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " is starting");
             }
-            if (graphTx == null)
-            {
-                // Make sure the graphTx is started
+            if (graphTx == null) {
                 graphTx = ((GraphDatabaseService)conn).beginTx();
-                NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " is starting");
             }
         }
-
-        public Object getConnection()
-        {
-            if (conn == null || graphTx == null)
-            {
-                // Set the "connection" to the graphDB, and start its transaction
-                obtainNewConnection();
-            }
+        public Object getConnection() {
+            if (conn == null || graphTx == null) obtainNewConnection();
             return conn;
         }
-
-        public void release()
-        {
-            if (commitOnRelease)
-            {
-                if (conn != null)
-                {
-                    NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " is committing");
+        public void release() {
+            if (commitOnRelease) {
+                if (conn != null) {
                     graphTx.success();
                     graphTx.close();
                     graphTx = null;
                     xaRes = null;
-                    NucleusLogger.CONNECTION.debug("Managed connection " + this.toString() + " committed connection");
                 }
             }
             super.release();
         }
-
-        public void close()
-        {
-            if (conn == null)
-            {
-                return;
-            }
-
-            // Notify anything using this connection to use it now
-            for (int i=0; i<listeners.size(); i++)
-            {
-                listeners.get(i).managedConnectionPreClose();
-            }
-
-            if (graphTx != null)
-            {
-                // End the current request
-                NucleusLogger.CONNECTION.debug("ManagedConnection " + this.toString() + " is committing");
+        public void close() {
+            if (conn == null) return;
+            for (int i=0; i<listeners.size(); i++) listeners.get(i).managedConnectionPreClose();
+            if (graphTx != null) {
                 graphTx.success();
                 graphTx.close();
                 graphTx = null;
                 xaRes = null;
-                NucleusLogger.CONNECTION.debug("ManagedConnection " + this.toString() + " committed connection");
             }
-
-            // Remove the connection from pooling
-            for (int i=0; i<listeners.size(); i++)
-            {
-                listeners.get(i).managedConnectionPostClose();
-            }
-
+            for (int i=0; i<listeners.size(); i++) listeners.get(i).managedConnectionPostClose();
             xaRes = null;
-
             super.close();
         }
-
-        public XAResource getXAResource()
-        {
-            if (xaRes == null)
-            {
-                if (conn == null || graphTx == null)
-                {
-                    // Make sure we have a connection and graphTx
-                    obtainNewConnection();
-                }
+        public XAResource getXAResource() {
+            if (xaRes == null) {
+                if (conn == null || graphTx == null) obtainNewConnection();
                 xaRes = new EmulatedXAResource(this);
             }
             return xaRes;
         }
     }
 
-    /**
-     * Emulate the two phase protocol for non XA
-     */
-    static class EmulatedXAResource extends AbstractEmulatedXAResource
-    {
+    static class EmulatedXAResource extends AbstractEmulatedXAResource {
         Transaction graphTx;
-
-        EmulatedXAResource(ManagedConnectionImpl mconn)
-        {
+        EmulatedXAResource(ManagedConnectionImpl mconn) {
             super(mconn);
             this.graphTx = mconn.graphTx;
         }
-
-        public void commit(Xid xid, boolean onePhase) throws XAException
-        {
+        public void commit(Xid xid, boolean onePhase) throws XAException {
             super.commit(xid, onePhase);
             graphTx.success();
             graphTx.close();
             ((ManagedConnectionImpl)mconn).graphTx = null;
             ((ManagedConnectionImpl)mconn).xaRes = null;
         }
-
-        public void rollback(Xid xid) throws XAException
-        {
+        public void rollback(Xid xid) throws XAException {
             super.rollback(xid);
             graphTx.failure();
             graphTx.close();
             ((ManagedConnectionImpl)mconn).graphTx = null;
             ((ManagedConnectionImpl)mconn).xaRes = null;
         }
-
-        public void end(Xid xid, int flags) throws XAException
-        {
+        public void end(Xid xid, int flags) throws XAException {
             super.end(xid, flags);
             ((ManagedConnectionImpl)mconn).xaRes = null;
         }

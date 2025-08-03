@@ -18,7 +18,6 @@ Contributors:
 package org.datanucleus.store.neo4j.query;
 
 import java.io.ObjectStreamException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,197 +28,139 @@ import java.util.NoSuchElementException;
 
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.store.neo4j.Neo4jUtils;
+import org.datanucleus.store.neo4j.Neo4jObjectFactory;
+import org.datanucleus.store.neo4j.EmbeddedPersistenceUtils;
 import org.datanucleus.store.query.AbstractQueryResult;
 import org.datanucleus.store.query.AbstractQueryResultIterator;
 import org.datanucleus.store.query.Query;
 import org.datanucleus.util.ConcurrentReferenceHashMap;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
-import org.datanucleus.util.StringUtils;
 import org.datanucleus.util.ConcurrentReferenceHashMap.ReferenceType;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Result;
 
 /**
- * QueryResult for Neo4j queries that tries to lazy load results from the provided ExecutionResult
- * so to avoid problems with memory. By default if the query is for instances of a candidate (i.e no result
- * clause) then the method used to calculate the size is by doing a Cypher "count" query, and if the query is
- * for a result clause then the method used to calculate the size is by loading all results; obviously the user
- * can set it through a query extension/hint.
- * 
- * TODO Support fetching objects in batches
+ * QueryResult for Neo4j queries that lazily loads results from the provided Result object.
  */
 public class LazyLoadQueryResult extends AbstractQueryResult
 {
-    protected ExecutionContext ec;
+    private static final long serialVersionUID = 1L;
 
-    protected Result result;
-
+    protected transient ExecutionContext ec;
+    protected transient Result result;
     protected String candidateAliasName;
-
     protected AbstractClassMetaData cmd;
-
     protected String[] cypherResults;
 
-    /** Map of object, keyed by the index (0, 1, etc). */
     protected Map<Integer, Object> itemsByIndex = null;
 
     public LazyLoadQueryResult(Query q, Result result, String cypherResult)
     {
         super(q);
-        this.candidateAliasName = query.getCompilation().getCandidateAlias();
         this.ec = q.getExecutionContext();
-        this.cmd = ec.getMetaDataManager().getMetaDataForClass(query.getCandidateClass(), ec.getClassLoaderResolver());
+        this.cmd = (q.getCandidateClass() != null) ? ec.getMetaDataManager().getMetaDataForClass(query.getCandidateClass(), ec.getClassLoaderResolver()) : null;
         this.result = result;
-        this.cypherResults = (cypherResult != null ? cypherResult.split(",") : null);
+        this.cypherResults = (cypherResult != null ? cypherResult.trim().split("\\s*,\\s*") : null);
+        this.candidateAliasName = (query.getCompilation() != null) ? query.getCompilation().getCandidateAlias() : null;
+        
+        this.resultSizeMethod = "last"; 
 
-        if (cypherResults == null || (candidateAliasName != null && cypherResults[0].equals(candidateAliasName)))
-        {
-            resultSizeMethod = "count";
-        }
-        else
-        {
-            resultSizeMethod = "last";
-        }
-        resultSizeMethod = "last"; // Override the above til we have confidence in count
-
-        // Process any supported extensions
-        String cacheType = query.getStringExtensionProperty("cacheType", "strong");
-        if (cacheType != null)
-        {
-            if (cacheType.equalsIgnoreCase("soft"))
-            {
-                itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.SOFT);
-            }
-            else if (cacheType.equalsIgnoreCase("weak"))
-            {
-                itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.WEAK);
-            }
-            else if (cacheType.equalsIgnoreCase("strong"))
-            {
-                itemsByIndex = new HashMap();
-            }
-            else if (cacheType.equalsIgnoreCase("none"))
-            {
-                itemsByIndex = null;
-            }
-            else
-            {
-                itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.WEAK);
-            }
-        }
-        else
-        {
+        String cacheType = query.getStringExtensionProperty("cacheType", "soft");
+        if ("soft".equalsIgnoreCase(cacheType)) {
+            itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.SOFT);
+        } else if ("weak".equalsIgnoreCase(cacheType)) {
             itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.WEAK);
+        } else if ("strong".equalsIgnoreCase(cacheType)) {
+            itemsByIndex = new HashMap<>();
+        } else {
+            itemsByIndex = new ConcurrentReferenceHashMap<>(1, ReferenceType.STRONG, ReferenceType.SOFT);
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#closingConnection()
-     */
     @Override
     protected void closingConnection()
     {
-        resultSizeMethod = "last";
         if (loadResultsAtCommit && isOpen() && result != null)
         {
-            // Query connection closing message
             NucleusLogger.QUERY.info(Localiser.msg("052606", query.toString()));
-
-            synchronized (this)
+            while (result.hasNext())
             {
-                // Go through to end of Iterator
-                while (result.hasNext())
-                {
-                    Map<String, Object> map = result.next();
-                    Object result = getResultFromMapRow(map);
-                    itemsByIndex.put(itemsByIndex.size(), result);
+                Map<String, Object> map = result.next();
+                if (itemsByIndex != null) {
+                    itemsByIndex.put(itemsByIndex.size(), getResultFromMapRow(map));
                 }
-                result.close();
-                result = null;
             }
+            result.close();
+            result = null;
         }
     }
 
     private Object getResultFromMapRow(Map<String, Object> map)
     {
-        Object result = null;
-        if (cypherResults == null || (candidateAliasName != null && cypherResults[0].equals(candidateAliasName)))
+        boolean isCandidateResult = (cypherResults == null || (candidateAliasName != null && cypherResults.length == 1 && cypherResults[0].equals(candidateAliasName)));
+
+        if (isCandidateResult)
         {
-            // Candidate result
-            PropertyContainer node = (PropertyContainer) map.get(candidateAliasName);
-            AbstractClassMetaData propObjCmd = Neo4jUtils.getClassMetaDataForPropertyContainer(node, query.getExecutionContext(), cmd);
-            result = Neo4jUtils.getObjectForPropertyContainer(node, propObjCmd, query.getExecutionContext(), query.getIgnoreCache());
+            if (candidateAliasName == null || !map.containsKey(candidateAliasName)) {
+                return null; 
+            }
+            PropertyContainer container = (PropertyContainer) map.get(candidateAliasName);
+            if (container == null) return null;
+
+            AbstractClassMetaData propObjCmd = EmbeddedPersistenceUtils.getClassMetaDataForPropertyContainer(container, ec, cmd);
+            return Neo4jObjectFactory.getObjectForPropertyContainer(container, propObjCmd, ec);
         }
         else
         {
-            // Result clause specified, so extract into Object or Object[]
             if (cypherResults.length == 1)
             {
-                result = map.get(cypherResults[0]);
+                return map.get(cypherResults[0].trim());
             }
             else
             {
-                result = new Object[cypherResults.length];
-                for (int i=0;i<cypherResults.length;i++)
+                Object[] row = new Object[cypherResults.length];
+                for (int i = 0; i < cypherResults.length; i++)
                 {
-                    Array.set(result, i, map.get(cypherResults[i]));
+                    row[i] = map.get(cypherResults[i].trim());
                 }
+                return row;
             }
         }
-
-        return result;
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#close()
-     */
     @Override
     public synchronized void close()
     {
-        itemsByIndex.clear();
-        itemsByIndex = null;
-        result = null;
-
+        if (itemsByIndex != null) {
+            itemsByIndex.clear();
+        }
+        if (result != null) {
+            result.close();
+            result = null;
+        }
         super.close();
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#closeResults()
-     */
     @Override
     protected void closeResults()
     {
-        // TODO Cache any query results if required
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#getSizeUsingMethod()
-     */
     @Override
     protected int getSizeUsingMethod()
     {
-        if (resultSizeMethod.equalsIgnoreCase("LAST"))
+        if ("last".equalsIgnoreCase(resultSizeMethod))
         {
-            // Just load all results and the size is the number we have
-            while (true)
-            {
-                getNextObject();
-                if (result == null)
-                {
-                    size = itemsByIndex.size();
-                    return size;
-                }
+            while (getNextObject() != null) {
+                // Keep iterating to populate cache
             }
+            size = (itemsByIndex != null) ? itemsByIndex.size() : 0;
+            return size;
         }
-
         return super.getSizeUsingMethod();
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#get(int)
-     */
     @Override
     public Object get(int index)
     {
@@ -227,37 +168,29 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         {
             throw new IndexOutOfBoundsException("Index must be 0 or higher");
         }
-
         if (itemsByIndex != null && itemsByIndex.containsKey(index))
         {
             return itemsByIndex.get(index);
         }
 
-        // Load next object continually until we find it
         while (true)
         {
-            Object nextPojo = getNextObject();
-            if (itemsByIndex != null && itemsByIndex.size() == (index+1))
+            Object nextObj = getNextObject();
+            if (itemsByIndex != null && itemsByIndex.size() == (index + 1))
             {
-                return nextPojo;
+                return nextObj;
             }
-            if (result == null)
+            if (result == null) 
             {
-                throw new IndexOutOfBoundsException("Beyond size of the results (" + (itemsByIndex!=null ? itemsByIndex.size() : 0) + ")");
+                throw new IndexOutOfBoundsException("Index " + index + " is out of bounds for the result set of size " + (itemsByIndex != null ? itemsByIndex.size() : 0));
             }
         }
     }
 
-    /**
-     * Method to extract the next object from the candidateResults (if there is one).
-     * If a result is present, this puts it into "itemsByIndex". Returns null if no more results.
-     * @return The next result (or null if no more).
-     */
-    protected Object getNextObject()
+    protected synchronized Object getNextObject()
     {
         if (result == null)
         {
-            // Already exhausted
             return null;
         }
 
@@ -265,54 +198,43 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         {
             Map<String, Object> map = result.next();
             Object rowResult = getResultFromMapRow(map);
-            itemsByIndex.put(itemsByIndex.size(), rowResult);
+            if (itemsByIndex != null)
+            {
+                itemsByIndex.put(itemsByIndex.size(), rowResult);
+            }
             return rowResult;
         }
-
-        // Reached end of results, so null the iterator to signify this
-        result.close();
-        result = null;
-        return null;
+        else
+        {
+            result.close();
+            result = null;
+            return null;
+        }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#iterator()
-     */
     @Override
-    public Iterator iterator()
+    public Iterator<Object> iterator()
     {
         return new QueryResultIterator();
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#listIterator()
-     */
     @Override
-    public ListIterator listIterator()
+    public ListIterator<Object> listIterator()
     {
         return new QueryResultIterator();
     }
 
     private class QueryResultIterator extends AbstractQueryResultIterator
     {
-        private int nextRowNum = 0;
+        private int cursor = -1;
 
         @Override
         public boolean hasNext()
         {
             synchronized (LazyLoadQueryResult.this)
             {
-                if (!isOpen())
-                {
-                    // Spec 14.6.7 Calling hasNext() on closed Query will return false
-                    return false;
-                }
-
-                if (nextRowNum < itemsByIndex.size())
-                {
-                    return true;
-                }
-
+                if (!isOpen()) return false;
+                if (cursor + 1 < (itemsByIndex != null ? itemsByIndex.size() : 0)) return true;
                 return (result != null && result.hasNext());
             }
         }
@@ -322,94 +244,66 @@ public class LazyLoadQueryResult extends AbstractQueryResult
         {
             synchronized (LazyLoadQueryResult.this)
             {
-                if (!isOpen())
+                if (!hasNext())
                 {
-                    // Spec 14.6.7 Calling next() on closed Query will throw NoSuchElementException
-                    throw new NoSuchElementException(Localiser.msg("052600"));
+                     throw new NoSuchElementException(Localiser.msg("052602"));
                 }
-
-                if (nextRowNum < itemsByIndex.size())
-                {
-                    // Already read in this value so return it
-                    Object pojo = itemsByIndex.get(nextRowNum);
-                    ++nextRowNum;
-                    return pojo;
-                }
-                else if (result != null && result.hasNext())
-                {
-                    // Get next value from resultIterator
-                    Object pojo = getNextObject();
-                    ++nextRowNum;
-                    return pojo;
-                }
-                throw new NoSuchElementException(Localiser.msg("052602"));
+                cursor++;
+                return get(cursor);
             }
         }
-
+        
+        // === FIX: Implemented all required abstract methods from ListIterator ===
         @Override
         public boolean hasPrevious()
         {
-            // We only navigate in forward direction, but maybe could provide this method
-            throw new UnsupportedOperationException("Not yet implemented");
-        }
-
-        @Override
-        public int nextIndex()
-        {
-            throw new UnsupportedOperationException("Not yet implemented");
+            return cursor > 0;
         }
 
         @Override
         public Object previous()
         {
-            throw new UnsupportedOperationException("Not yet implemented");
+            if (!hasPrevious()) {
+                 throw new NoSuchElementException();
+            }
+            return get(--cursor);
+        }
+
+        @Override
+        public int nextIndex()
+        {
+            return cursor + 1;
         }
 
         @Override
         public int previousIndex()
         {
-            throw new UnsupportedOperationException("Not yet implemented");
+            return cursor;
         }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.AbstractQueryResult#equals(java.lang.Object)
-     */
     @Override
     public boolean equals(Object o)
     {
-        if (o == null || !(o instanceof LazyLoadQueryResult))
-        {
-            return false;
-        }
-
-        LazyLoadQueryResult other = (LazyLoadQueryResult)o;
-        // TODO Base equality on the results too (itemsByIndex) but means we have to load them
-        if (query != null)
-        {
-            return other.query == query;
-        }
-        return StringUtils.toJVMIDString(other).equals(StringUtils.toJVMIDString(this));
+        if (o == this) return true;
+        if (!(o instanceof LazyLoadQueryResult)) return false;
+        LazyLoadQueryResult other = (LazyLoadQueryResult) o;
+        return this.query == other.query;
     }
-
-    public int hashCode()
-    {
-        return super.hashCode();
-    }
-
-    /**
-     * Handle serialisation by returning a java.util.ArrayList of all of the results for this query
-     * after disconnecting the query which has the consequence of enforcing the load of all objects.
-     * @return The object to serialise
-     * @throws ObjectStreamException Thrown if an error occurs
-     */
+    
+    // === FIX: Removed @Override annotation as the method is not in the superclass ===
     protected Object writeReplace() throws ObjectStreamException
     {
         disconnect();
-        List list = new ArrayList();
-        for (int i=0;i<itemsByIndex.size();i++)
-        {
-            list.add(itemsByIndex.get(i));
+        List<Object> list = new ArrayList<>();
+        if (itemsByIndex != null) {
+            // Ensure all results are loaded before creating the list for serialization
+            if (result != null) {
+                size();
+            }
+            for (int i = 0; i < itemsByIndex.size(); i++) {
+                list.add(itemsByIndex.get(i));
+            }
         }
         return list;
     }

@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>datanucleus-neo4j</artifactId>
-	<version>6.0.1-SNAPSHOT</version>
+    <version>6.0.1-SNAPSHOT</version>
 
     <name>DataNucleus Neo4j plugin</name>
     <description>
@@ -19,6 +19,7 @@
     <properties>
         <dn.core.version>6.0.0-m1</dn.core.version>
         <neo4j.version>3.0.0</neo4j.version>
+        <neo4j.driver.version>4.4.20</neo4j.driver.version>
     </properties>
 
     <scm>
@@ -34,10 +35,18 @@
             <version>[${dn.core.version}, 6.9)</version>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j</artifactId>
             <version>${neo4j.version}</version>
+            <scope>provided</scope> <!-- Make embedded engine optional at compile time -->
+        </dependency>
+
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>${neo4j.driver.version}</version>
         </dependency>
     </dependencies>
 
@@ -49,6 +58,7 @@
                     <overview>${basedir}/src/java/org/datanucleus/store/neo4j/overview.html</overview>
                 </configuration>
             </plugin>
+            
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
@@ -56,7 +66,8 @@
                     <instructions>
                         <Bundle-SymbolicName>org.datanucleus.store.neo4j;singleton:=true</Bundle-SymbolicName>
                         <Import-Package>
-                            org.neo4j*;version="${neo4j.version}",
+                            org.neo4j.graphdb*;version="${neo4j.version}";resolution:=optional,
+                            org.neo4j.driver*;version="${neo4j.driver.version}",
                             org.datanucleus*;version="${dn.core.version}",
                             *;resolution:=optional
                         </Import-Package>

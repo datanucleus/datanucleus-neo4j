@@ -11,401 +11,145 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-Contributors :
-    ...
 ***********************************************************************/
 package org.datanucleus.store.neo4j.query;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.metadata.QueryLanguage;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.ManagedConnection;
-import org.datanucleus.store.connection.ManagedConnectionResourceListener;
-import org.datanucleus.store.neo4j.Neo4jStoreManager;
-import org.datanucleus.store.neo4j.Neo4jUtils;
+import org.datanucleus.store.neo4j.EmbeddedQueryEngine;
+import org.datanucleus.store.neo4j.Neo4jSchemaUtils;
 import org.datanucleus.store.query.AbstractJPQLQuery;
-import org.datanucleus.store.query.AbstractQueryResult;
 import org.datanucleus.store.query.QueryManager;
 import org.datanucleus.store.query.QueryResult;
-import org.datanucleus.store.query.inmemory.JDOQLInMemoryEvaluator;
+import org.datanucleus.store.query.inmemory.JPQLInMemoryEvaluator;
 import org.datanucleus.store.query.inmemory.JavaQueryInMemoryEvaluator;
-import org.datanucleus.util.Localiser;
-import org.datanucleus.util.NucleusLogger;
 import org.neo4j.graphdb.GraphDatabaseService;
 
-/**
- * JPQL query for Neo4j.
- */
-public class JPQLQuery extends AbstractJPQLQuery
-{
+public class JPQLQuery extends AbstractJPQLQuery {
     private static final long serialVersionUID = -38470786707194010L;
-    /** The compilation of the query for this datastore. Not applicable if totally in-memory. */
     protected transient Neo4jQueryCompilation datastoreCompilation = null;
 
-    /**
-     * Constructs a new query instance that uses the given persistence manager.
-     * @param storeMgr StoreManager for this query
-     * @param ec execution context
-     */
-    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec)
-    {
+    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec) {
         this(storeMgr, ec, (JPQLQuery) null);
     }
 
-    /**
-     * Constructs a new query instance having the same criteria as the given query.
-     * @param storeMgr StoreManager for this query
-     * @param ec execution context
-     * @param q The query from which to copy criteria.
-     */
-    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec, JPQLQuery q)
-    {
+    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec, JPQLQuery q) {
         super(storeMgr, ec, q);
     }
 
-    /**
-     * Constructor for a JPQL query where the query is specified using the "Single-String" format.
-     * @param storeMgr StoreManager for this query
-     * @param ec execution context
-     * @param query The query string
-     */
-    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec, String query)
-    {
+    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec, String query) {
         super(storeMgr, ec, query);
     }
 
-    /**
-     * Utility to remove any previous compilation of this Query.
-     */
-    protected void discardCompiled()
-    {
+    @Override
+    protected void discardCompiled() {
         super.discardCompiled();
-
         datastoreCompilation = null;
     }
 
-    /**
-     * Method to return if the query is compiled.
-     * @return Whether it is compiled
-     */
-    protected boolean isCompiled()
-    {
-        if (evaluateInMemory())
-        {
-            // Don't need datastore compilation here since evaluating in-memory
-            return compilation != null;
-        }
-
-        // Need both to be present to say "compiled"
-        if (compilation == null || datastoreCompilation == null)
-        {
-            return false;
-        }
-        if (!datastoreCompilation.isPrecompilable())
-        {
-            NucleusLogger.GENERAL.info("Query compiled but not precompilable so ditching datastore compilation");
+    @Override
+    protected boolean isCompiled() {
+        if (evaluateInMemory()) { return compilation != null; }
+        if (compilation == null || datastoreCompilation == null) { return false; }
+        if (!datastoreCompilation.isPrecompilable()) {
             datastoreCompilation = null;
             return false;
         }
         return true;
     }
 
-    /**
-     * Convenience method to return whether the query should be evaluated in-memory.
-     * @return Use in-memory evaluation?
-     */
-    protected boolean evaluateInMemory()
-    {
-        if (candidateCollection != null)
-        {
-            if (compilation != null && compilation.getSubqueryAliases() != null)
-            {
-                // TODO In-memory evaluation of subqueries isn't fully implemented yet, so remove this when it is
-                NucleusLogger.QUERY.warn("In-memory evaluator doesn't currently handle subqueries completely so evaluating in datastore");
-                return false;
-            }
-
-            Object val = getExtension(EXTENSION_EVALUATE_IN_MEMORY);
-            if (val == null)
-            {
-                return true;
-            }
-            return Boolean.valueOf((String)val);
-        }
-        return super.evaluateInMemory();
-    }
-
-    /**
-     * Method to compile the JDOQL query.
-     * Uses the superclass to compile the generic query populating the "compilation", and then generates
-     * the datastore-specific "datastoreCompilation".
-     * @param parameterValues Map of param values keyed by param name (if available at compile time)
-     */
-    protected synchronized void compileInternal(Map parameterValues)
-    {
-        if (isCompiled())
-        {
+    @Override
+    protected synchronized void compileInternal(Map parameterValues) {
+        System.out.println("DEBUG (JPQLQuery): compileInternal called. Query: " + getSingleStringQuery());
+        if (isCompiled()) {
+            System.out.println("DEBUG (JPQLQuery): Already compiled.");
             return;
         }
-
-        // Compile the generic query expressions
         super.compileInternal(parameterValues);
-
-        boolean inMemory = evaluateInMemory();
-        if (candidateCollection != null && inMemory)
-        {
-            // Querying a candidate collection in-memory, so just return now (don't need datastore compilation)
-            // TODO Maybe apply the result class checks ?
+        if (candidateCollection != null && evaluateInMemory()) {
+            System.out.println("DEBUG (JPQLQuery): In-memory evaluation from candidate collection. No datastore compilation needed.");
             return;
         }
-
-        if (candidateClass == null || candidateClassName == null)
-        {
+        if (candidateClass == null && compilation != null) {
             candidateClass = compilation.getCandidateClass();
             candidateClassName = candidateClass.getName();
         }
-
-        // Make sure any persistence info is loaded
-        ec.hasPersistenceInformationForClass(candidateClass);
-
-        AbstractClassMetaData cmd = getCandidateClassMetaData();
-
-        QueryManager qm = getQueryManager();
-        String datastoreKey = getStoreManager().getQueryCacheKey();
-        String cacheKey = getQueryCacheKey();
-        if (useCaching())
-        {
-            // Allowing caching so try to find compiled (datastore) query
-            datastoreCompilation = (Neo4jQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey,
-                getLanguage(), cacheKey);
-            if (datastoreCompilation != null)
-            {
-                // Cached compilation exists for this datastore so reuse it
-                return;
-            }
-        }
-
+        
+        System.out.println("DEBUG (JPQLQuery): Starting datastore compilation...");
         datastoreCompilation = new Neo4jQueryCompilation();
-        synchronized (datastoreCompilation)
-        {
-            if (inMemory)
-            {
-                // Generate statement to just retrieve all candidate objects for later processing
-            }
-            else
-            {
-                // Try to generate statement to perform the full query in the datastore
-                compileQueryFull(parameterValues, cmd);
-            }
-        }
-
-        if (cacheKey != null)
-        {
-            if (datastoreCompilation.isPrecompilable())
-            {
-                qm.addDatastoreQueryCompilation(datastoreKey, getLanguage(), cacheKey, datastoreCompilation);
-            }
+        if (!evaluateInMemory()) {
+            compileQueryFull(parameterValues);
+            System.out.println("DEBUG (JPQLQuery): Datastore compilation complete. Cypher: " + datastoreCompilation.getCypherText());
+        } else {
+            System.out.println("DEBUG (JPQLQuery): In-memory evaluation. Datastore compilation skipped.");
         }
     }
 
-    /**
-     * Method to execute the query.
-     * @param parameters Map of parameter values keyed by name.
-     */
-    protected Object performExecute(Map parameters)
-    {
+    @Override
+    protected Object performExecute(Map parameters) {
+        System.out.println("DEBUG (JPQLQuery): performExecute called. Query Type: " + type);
         ManagedConnection mconn = getStoreManager().getConnectionManager().getConnection(ec);
-        try
-        {
-            GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
+        try {
+            GraphDatabaseService db = (GraphDatabaseService) mconn.getConnection();
+            List<?> candidates;
 
-            long startTime = System.currentTimeMillis();
-            if (NucleusLogger.QUERY.isDebugEnabled())
-            {
-                NucleusLogger.QUERY.debug(Localiser.msg("021046", QueryLanguage.JPQL.name(), getSingleStringQuery(), null));
+            if (candidateCollection != null) {
+                System.out.println("DEBUG (JPQLQuery): Executing against provided candidate collection of size: " + candidateCollection.size());
+                candidates = new ArrayList<>(candidateCollection);
+            } else if (evaluateInMemory()) {
+                System.out.println("DEBUG (JPQLQuery): In-memory evaluation. Fetching all candidates of type " + candidateClass.getName());
+                AbstractClassMetaData cmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
+                String cypherText = Neo4jSchemaUtils.getCypherTextForQuery(ec, cmd, compilation.getCandidateAlias(), subclasses, null, null, null, null, null);
+                candidates = EmbeddedQueryEngine.executeCypherQuery(this, db, cypherText, Collections.emptyMap());
+            } else {
+                String cypherText = datastoreCompilation.getCypherText();
+                System.out.println("DEBUG (JPQLQuery): Executing datastore query with Cypher: " + cypherText);
+                candidates = EmbeddedQueryEngine.executeCypherQuery(this, db, cypherText, parameters);
             }
 
-            List candidates = null;
-            boolean filterInMemory = (filter != null);
-            boolean resultInMemory = (result != null);
-            boolean orderInMemory = (ordering != null);
-            boolean rangeInMemory = (range != null);
-            if (candidateCollection != null)
-            {
-                candidates = new ArrayList(candidateCollection);
-            }
-            else if (evaluateInMemory())
-            {
-                // Retrieve the candidates using Cypher
-                if (!db.index().existsForNodes(Neo4jStoreManager.PROPCONTAINER_TYPE_INDEX))
-                {
-                    // The node index doesn't exist so obviously no data
-                    candidates = new ArrayList();
-                }
-                else
-                {
-                    AbstractClassMetaData cmd =
-                        ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
-                    String cypherText = Neo4jUtils.getCypherTextForQuery(ec, cmd, compilation.getCandidateAlias(), 
-                        subclasses, null, null, null, null, null);
-                    candidates = Neo4jUtils.executeCypherQuery(this, db, cypherText, cmd);
-                }
-            }
-            else
-            {
-                filterInMemory = !datastoreCompilation.isFilterComplete();
-                if (!filterInMemory)
-                {
-                    resultInMemory = !datastoreCompilation.isResultComplete();
-                    orderInMemory = !datastoreCompilation.isOrderComplete();
-                    if (!orderInMemory)
-                    {
-                        rangeInMemory = !datastoreCompilation.isRangeComplete();
-                    }
-                }
-
-                if (!db.index().existsForNodes(Neo4jStoreManager.PROPCONTAINER_TYPE_INDEX))
-                {
-                    // The node index doesn't exist so obviously no data and not needing a result clause
-                    candidates = new ArrayList();
-                }
-                else
-                {
-                    AbstractClassMetaData cmd =
-                        ec.getMetaDataManager().getMetaDataForClass(candidateClass, ec.getClassLoaderResolver());
-                    String cypherText = datastoreCompilation.getCypherText();
-                    candidates = Neo4jUtils.executeCypherQuery(this, db, cypherText, cmd);
-                }
+            System.out.println("DEBUG (JPQLQuery): Initial candidate result set size: " + candidates.size());
+            Collection<?> results = candidates;
+            if (evaluateInMemory() || !datastoreCompilation.isFilterComplete()) {
+                System.out.println("DEBUG (JPQLQuery): Applying in-memory filter/result mapping.");
+                if (results instanceof QueryResult) { ((QueryResult) results).disconnect(); }
+                JavaQueryInMemoryEvaluator resultMapper = new JPQLInMemoryEvaluator(this, (Collection) results, compilation, parameters, ec.getClassLoaderResolver());
+                results = resultMapper.execute(true, true, true, true, true);
+                System.out.println("DEBUG (JPQLQuery): Final in-memory result set size: " + results.size());
             }
 
-            Collection results = candidates;
-            if (filterInMemory || resultInMemory || resultClass != null || orderInMemory || rangeInMemory)
-            {
-                if (results instanceof QueryResult)
-                {
-                    // Make sure the cursor(s) are all loaded
-                    ((QueryResult)results).disconnect();
-                }
-
-                // Evaluate result/filter/grouping/having/ordering in-memory
-                JavaQueryInMemoryEvaluator resultMapper = new JDOQLInMemoryEvaluator(this, results, compilation,
-                    parameters, ec.getClassLoaderResolver());
-                // TODO Support resultClass
-                results = resultMapper.execute(filterInMemory, orderInMemory, resultInMemory, true, rangeInMemory);
-            }
-
-            if (NucleusLogger.QUERY.isDebugEnabled())
-            {
-                NucleusLogger.QUERY.debug(Localiser.msg("021074", QueryLanguage.JPQL.name(), "" + (System.currentTimeMillis() - startTime)));
-            }
-
-            if (type == QueryType.BULK_DELETE)
-            {
-                if (results instanceof QueryResult)
-                {
-                    // Make sure the cursor(s) are all loaded
-                    ((QueryResult)results).disconnect();
-                }
-
+            if (type == QueryType.BULK_DELETE) {
+                System.out.println("DEBUG (JPQLQuery): Query is BULK_DELETE. Deleting " + results.size() + " objects.");
+                if (results instanceof QueryResult) { ((QueryResult) results).disconnect(); }
                 ec.deleteObjects(results.toArray());
-                return Long.valueOf(results.size());
+                System.out.println("DEBUG (JPQLQuery): BULK_DELETE completed.");
+                return (long) results.size();
+            } else if (type == QueryType.BULK_UPDATE) {
+                throw new NucleusException("Bulk Update is not supported for Neo4j JPQL queries.");
             }
-            else if (type == QueryType.BULK_UPDATE)
-            {
-                // TODO Support BULK UPDATE
-                throw new NucleusException("Bulk Update is not yet supported");
-            }
-
-            if (results instanceof QueryResult)
-            {
-                final QueryResult qr1 = (QueryResult)results;
-                final ManagedConnection mconn1 = mconn;
-                ManagedConnectionResourceListener listener =
-                    new ManagedConnectionResourceListener()
-                {
-                    public void transactionFlushed(){}
-                    public void transactionPreClose()
-                    {
-                        // Tx : disconnect query from ManagedConnection (read in unread rows etc)
-                        qr1.disconnect();
-                    }
-                    public void managedConnectionPreClose()
-                    {
-                        if (!ec.getTransaction().isActive())
-                        {
-                            // Non-Tx : disconnect query from ManagedConnection (read in unread rows etc)
-                            qr1.disconnect();
-                        }
-                    }
-                    public void managedConnectionPostClose(){}
-                    public void resourcePostClose()
-                    {
-                        mconn1.removeListener(this);
-                    }
-                };
-                mconn.addListener(listener);
-                if (qr1 instanceof AbstractQueryResult)
-                {
-                    ((AbstractQueryResult)qr1).addConnectionListener(listener);
-                }
-            }
-
+            
             return results;
-        }
-        finally
-        {
+        } finally {
             mconn.release();
         }
     }
 
-    /**
-     * Method to compile the query for the datastore attempting to evaluate the whole query in the datastore
-     * if possible. Sets the components of the "datastoreCompilation".
-     * @param parameters Input parameters (if known)
-     * @param candidateCmd Metadata for the candidate class
-     */
-    private void compileQueryFull(Map parameters, AbstractClassMetaData candidateCmd)
-    {
-        long startTime = 0;
-        if (NucleusLogger.QUERY.isDebugEnabled())
-        {
-            startTime = System.currentTimeMillis();
-            NucleusLogger.QUERY.debug(Localiser.msg("021083", getLanguage(), toString()));
-        }
-
-        // Generate filter, result DBObjects as appropriate
-        QueryToCypherMapper mapper = new QueryToCypherMapper(compilation, parameters, candidateCmd, ec, this);
+    private void compileQueryFull(Map parameters) {
+        AbstractClassMetaData cmd = getCandidateClassMetaData();
+        QueryToCypherMapper mapper = new QueryToCypherMapper(compilation, parameters, cmd, ec, this);
         mapper.compile(datastoreCompilation);
-
-        if (candidateCollection != null)
-        {
-            // Restrict to the supplied candidate ids
-        }
-
-        // Set any extensions (TODO Support locking if possible with Neo4j)
-
-        if (NucleusLogger.QUERY.isDebugEnabled())
-        {
-            NucleusLogger.QUERY.debug(Localiser.msg("021084", getLanguage(), System.currentTimeMillis()-startTime));
-        }
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.query.Query#getNativeQuery()
-     */
     @Override
-    public Object getNativeQuery()
-    {
-        if (datastoreCompilation != null)
-        {
+    public Object getNativeQuery() {
+        if (datastoreCompilation != null) {
             return datastoreCompilation.getCypherText();
         }
         return null;

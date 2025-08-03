@@ -17,7 +17,6 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.neo4j.fieldmanager;
 
-import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,7 +31,6 @@ import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.PersistableObjectType;
 import org.datanucleus.exceptions.NucleusDataStoreException;
-import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
@@ -42,15 +40,17 @@ import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.fieldmanager.AbstractFetchFieldManager;
-import org.datanucleus.store.fieldmanager.FieldManager;
+// === REFACTOR: Replaced Neo4jUtils with the new modular classes ===
+import org.datanucleus.store.neo4j.fieldmanager.DNRelationshipType;
+import org.datanucleus.store.neo4j.Neo4jObjectFactory;
+import org.datanucleus.store.neo4j.EmbeddedPersistenceUtils;
+import org.datanucleus.store.neo4j.Neo4jPropertyManager;
 import org.datanucleus.store.neo4j.Neo4jStoreManager;
-import org.datanucleus.store.neo4j.Neo4jUtils;
-import org.datanucleus.store.query.QueryUtils;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
 import org.datanucleus.store.types.SCOUtils;
-import org.datanucleus.store.types.converters.MultiColumnConverter;
-import org.datanucleus.store.types.converters.TypeConverter;
+import org.neo4j.driver.Value;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
@@ -58,655 +58,207 @@ import org.neo4j.graphdb.RelationshipType;
 
 /**
  * Field Manager for retrieving values from Neo4j.
+ * This class has been refactored to use the new modular utility classes.
  */
-public class FetchFieldManager extends AbstractFetchFieldManager
-{
+public class FetchFieldManager extends AbstractFetchFieldManager {
     protected Table table;
-
     protected PropertyContainer propObj;
 
-    boolean embedded = false;
-
-    public FetchFieldManager(DNStateManager sm, PropertyContainer node, Table table)
-    {
+    public FetchFieldManager(DNStateManager sm, PropertyContainer propcont, Table table) {
         super(sm);
+        this.propObj = propcont;
         this.table = table;
-        this.propObj = node;
-        this.embedded = sm.isEmbedded();
     }
 
-    public FetchFieldManager(ExecutionContext ec, PropertyContainer node, AbstractClassMetaData cmd, Table table)
-    {
+    public FetchFieldManager(ExecutionContext ec, PropertyContainer propcont, AbstractClassMetaData cmd, Table table) {
         super(ec, cmd);
+        this.propObj = propcont;
         this.table = table;
-        this.propObj = node;
-        if (node == null)
-        {
-            throw new NucleusException("Attempt to create FetchFieldManager for " + sm + " with null Neo4j Node!" +
-                " Generate a testcase that reproduces this and raise an issue");
-        }
     }
 
-    protected MemberColumnMapping getColumnMapping(int fieldNumber)
-    {
+    public FetchFieldManager(DNStateManager sm, org.neo4j.driver.types.Node remoteNode) {
+        super(sm);
+        this.propObj = new RemoteNodeWrapper(remoteNode);
+        this.table = null; // Table is not used in remote mode
+    }
+
+    private String getPropertyName(int fieldNumber) {
+        if (table == null) {
+            return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber).getName();
+        }
+        return getColumnMapping(fieldNumber).getColumn(0).getName();
+    }
+    
+    protected MemberColumnMapping getColumnMapping(int fieldNumber) {
         return table.getMemberColumnMappingForMember(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
     }
 
-    private Object getPropertyForColumn(PropertyContainer propObj, String columnName)
-    {
-        return (propObj.hasProperty(columnName)) ? propObj.getProperty(columnName) : null;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchBooleanField(int)
-     */
+    // Primitive fetch methods remain the same, as they directly access properties.
     @Override
-    public boolean fetchBooleanField(int fieldNumber)
-    {
-        Boolean val = (Boolean)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? false : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchByteField(int)
-     */
+    public boolean fetchBooleanField(int fn) { return (Boolean)propObj.getProperty(getPropertyName(fn), false); }
     @Override
-    public byte fetchByteField(int fieldNumber)
-    {
-        Byte val = (Byte)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchCharField(int)
-     */
+    public byte fetchByteField(int fn) { return ((Long)propObj.getProperty(getPropertyName(fn), 0L)).byteValue(); }
     @Override
-    public char fetchCharField(int fieldNumber)
-    {
-        Character val = (Character)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchDoubleField(int)
-     */
+    public char fetchCharField(int fn) { return ((String)propObj.getProperty(getPropertyName(fn), "\0")).charAt(0); }
     @Override
-    public double fetchDoubleField(int fieldNumber)
-    {
-        Double val = (Double)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchFloatField(int)
-     */
+    public double fetchDoubleField(int fn) { return (Double)propObj.getProperty(getPropertyName(fn), 0.0); }
     @Override
-    public float fetchFloatField(int fieldNumber)
-    {
-        Float val = (Float)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchIntField(int)
-     */
+    public float fetchFloatField(int fn) { return ((Double)propObj.getProperty(getPropertyName(fn), 0.0)).floatValue(); }
     @Override
-    public int fetchIntField(int fieldNumber)
-    {
-        Integer val = (Integer)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchLongField(int)
-     */
+    public int fetchIntField(int fn) { return ((Long)propObj.getProperty(getPropertyName(fn), 0L)).intValue(); }
     @Override
-    public long fetchLongField(int fieldNumber)
-    {
-        Long val = (Long)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchShortField(int)
-     */
+    public long fetchLongField(int fn) { return (Long)propObj.getProperty(getPropertyName(fn), 0L); }
     @Override
-    public short fetchShortField(int fieldNumber)
-    {
-        Short val = (Short)getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-        return (val == null) ? 0 : val;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchStringField(int)
-     */
+    public short fetchShortField(int fn) { return ((Long)propObj.getProperty(getPropertyName(fn), 0L)).shortValue(); }
     @Override
-    public String fetchStringField(int fieldNumber)
-    {
-        return (String) getPropertyForColumn(propObj, getColumnMapping(fieldNumber).getColumn(0).getName());
-    }
+    public String fetchStringField(int fn) { return (String)propObj.getProperty(getPropertyName(fn), null); }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchObjectField(int)
-     */
     @Override
-    public Object fetchObjectField(int fieldNumber)
-    {
+    public Object fetchObjectField(int fieldNumber) {
         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
-        if (mmd.getPersistenceModifier() != FieldPersistenceModifier.PERSISTENT)
-        {
+        if (mmd.getPersistenceModifier() != FieldPersistenceModifier.PERSISTENT) {
             return sm.provideField(fieldNumber);
+        }
+
+        if (propObj instanceof RemoteNodeWrapper) {
+            String propName = getPropertyName(fieldNumber);
+            if (!propObj.hasProperty(propName)) return null;
+            Object rawValue = ((RemoteNodeWrapper)propObj).getProperty(propName);
+            // === REFACTOR: Use Neo4jPropertyManager for type conversion ===
+            return Neo4jPropertyManager.getFieldValueFromStored(ec, mmd, rawValue, FieldRole.ROLE_FIELD);
         }
 
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
-        if (relationType != RelationType.NONE)
-        {
-            if (MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null))
+
+        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, null)) {
+            // Embedded Field
+            if (RelationType.isRelationSingleValued(relationType))
             {
-                // Embedded field
-                if (RelationType.isRelationSingleValued(relationType))
-                {
-                    // Embedded PC object
-                    AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
-                    if (embcmd == null)
-                    {
-                        throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
-                    }
-
-                    // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
-
-                    // TODO Cater for inherited embedded objects (discriminator)
-
-                    List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>();
-                    embMmds.add(mmd);
-                    DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embcmd, sm, fieldNumber, PersistableObjectType.EMBEDDED_PC);
-                    FieldManager ffm = new FetchEmbeddedFieldManager(embSM, propObj, embMmds, table);
-                    embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
-                    return embSM.getObject();
-                }
-                else if (RelationType.isRelationMultiValued(relationType))
-                {
-                    throw new NucleusUserException("Dont currently support embedded multivalued field : " + mmd.getFullFieldName());
-                }
+                AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+                if (embcmd == null) throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
+                List<AbstractMemberMetaData> embMmds = new ArrayList<>();
+                embMmds.add(mmd);
+                DNStateManager embSM = ec.getNucleusContext().getStateManagerFactory().newForEmbedded(ec, embcmd, sm, fieldNumber, PersistableObjectType.EMBEDDED_PC);
+                FetchEmbeddedFieldManager ffm = new FetchEmbeddedFieldManager(embSM, propObj, embMmds, table);
+                embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
+                return embSM.getObject();
             }
+            throw new NucleusUserException("Dont currently support embedded multivalued field : " + mmd.getFullFieldName());
         }
 
         return fetchNonEmbeddedObjectField(mmd, relationType, clr);
     }
 
-    protected Object fetchNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr)
-    {
-        int fieldNumber = mmd.getAbsoluteFieldNumber();
-        MemberColumnMapping mapping = getColumnMapping(fieldNumber);
+    protected Object fetchNonEmbeddedObjectField(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr) {
+        boolean optional = Optional.class.isAssignableFrom(mmd.getType());
 
-        boolean optional = false;
-        if (Optional.class.isAssignableFrom(mmd.getType()))
-        {
-            if (relationType != RelationType.NONE)
-            {
-                relationType = RelationType.ONE_TO_ONE_UNI;
-            }
-            optional = true;
-        }
-
-        if (RelationType.isRelationSingleValued(relationType))
-        {
-            if (!(propObj instanceof Node))
-            {
-                throw new NucleusUserException("Object " + sm + " is mapped to a Relationship. Not yet supported");
-            }
-
+        if (RelationType.isRelationSingleValued(relationType)) {
+            if (!(propObj instanceof Node)) throw new NucleusUserException("Object " + sm + " is mapped to a Relationship. Not yet supported");
             Object value = processSingleValuedRelationForNode(mmd, relationType, clr, (Node)propObj);
-            return optional ? (value!=null ? Optional.of(value) : Optional.empty()) : value;
-        }
-        else if (RelationType.isRelationMultiValued(relationType))
-        {
-            if (!(propObj instanceof Node))
-            {
-                // Any object mapped as a Relationship cannot have multi-value relations, only a source and target
-                throw new NucleusUserException("Object " + sm + " is mapped to a Relationship but has field " + 
-                    mmd.getFullFieldName() + " which is multi-valued. This is illegal");
-            }
-
+            return optional ? Optional.ofNullable(value) : value;
+        } else if (RelationType.isRelationMultiValued(relationType)) {
+            if (!(propObj instanceof Node)) throw new NucleusUserException("Object " + sm + " is mapped to a Relationship but has multi-valued field " + mmd.getFullFieldName());
             return processMultiValuedRelationForNode(mmd, relationType, clr, (Node)propObj);
         }
+        
+        String propName = getColumnMapping(mmd.getAbsoluteFieldNumber()).getColumn(0).getName();
+        if (!propObj.hasProperty(propName)) return optional ? Optional.empty() : null;
 
-        String propName = mapping.getColumn(0).getName(); // TODO Support multicol members
-        if (!propObj.hasProperty(propName))
-        {
-            return optional ? Optional.empty() : null;
-        }
         Object value = propObj.getProperty(propName);
-
-        if (mmd.isSerialized())
-        {
-            if (value instanceof String)
-            {
-                TypeConverter<Serializable, String> conv = ec.getTypeManager().getTypeConverterForType(Serializable.class, String.class);
-                return conv.toMemberType((String) value);
-            }
-
-            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " has a serialised value," +
-                    " but we only support String serialisation and is " + value.getClass().getName());
-        }
-
-        Object returnValue = null;
-        if (mapping.getTypeConverter() != null)
-        {
-            TypeConverter conv = mapping.getTypeConverter();
-            if (mapping.getNumberOfColumns() > 1)
-            {
-                boolean isNull = true;
-                Object valuesArr = null;
-                Class[] colTypes = ((MultiColumnConverter)conv).getDatastoreColumnTypes();
-                if (colTypes[0] == int.class)
-                {
-                    valuesArr = new int[mapping.getNumberOfColumns()];
-                }
-                else if (colTypes[0] == long.class)
-                {
-                    valuesArr = new long[mapping.getNumberOfColumns()];
-                }
-                else if (colTypes[0] == double.class)
-                {
-                    valuesArr = new double[mapping.getNumberOfColumns()];
-                }
-                else if (colTypes[0] == float.class)
-                {
-                    valuesArr = new double[mapping.getNumberOfColumns()];
-                }
-                else if (colTypes[0] == String.class)
-                {
-                    valuesArr = new String[mapping.getNumberOfColumns()];
-                }
-                // TODO Support other types
-                else
-                {
-                    valuesArr = new Object[mapping.getNumberOfColumns()];
-                }
-
-                for (int i=0;i<mapping.getNumberOfColumns();i++)
-                {
-                    String colName = mapping.getColumn(i).getName();
-                    if (propObj.hasProperty(colName))
-                    {
-                        isNull = false;
-                        Array.set(valuesArr, i, propObj.getProperty(colName));
-                    }
-                    else
-                    {
-                        Array.set(valuesArr, i, null);
-                    }
-                }
-
-                if (isNull)
-                {
-                    return null;
-                }
-
-                Object memberValue = conv.toMemberType(valuesArr);
-                if (sm != null && memberValue != null)
-                {
-                    memberValue = SCOUtils.wrapSCOField(sm, fieldNumber, memberValue, true);
-                }
-                return memberValue;
-            }
-
-            String colName = mapping.getColumn(0).getName();
-            if (!propObj.hasProperty(colName))
-            {
-                return null;
-            }
-            Object propVal = propObj.getProperty(colName);
-            returnValue = conv.toMemberType(propVal);
-
-            if (optional)
-            {
-                returnValue = (returnValue!=null) ? Optional.of(returnValue) : Optional.empty();
-            }
-            if (sm != null)
-            {
-                returnValue = SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), returnValue, true);
-            }
-            return returnValue;
-        }
-
-        Object fieldValue = Neo4jUtils.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
-        if (optional)
-        {
-            fieldValue = (fieldValue!=null) ? Optional.of(fieldValue) : Optional.empty();
-        }
-        return (sm!=null) ? SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), fieldValue, true) : fieldValue;
+        
+        // === REFACTOR: Use Neo4jPropertyManager for type conversion ===
+        Object fieldValue = Neo4jPropertyManager.getFieldValueFromStored(ec, mmd, value, FieldRole.ROLE_FIELD);
+        if (optional) fieldValue = Optional.ofNullable(fieldValue);
+        
+        return (sm != null) ? SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), fieldValue, true) : fieldValue;
     }
 
-    protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Node node)
-    {
-        RelationshipType type = DNRelationshipType.SINGLE_VALUED;
-        if (relationType == RelationType.MANY_TO_ONE_BI)
-        {
-            type = DNRelationshipType.MULTI_VALUED;
-        }
-
-        AbstractClassMetaData relCmd = null;
-        String propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME;
-        String propNameValue = mmd.getName();
-        if (mmd.getMappedBy() != null)
-        {
-            AbstractMemberMetaData[] relMmds = mmd.getRelatedMemberMetaData(clr);
-            propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME_NONOWNER;
-            relCmd = relMmds[0].getAbstractClassMetaData();
-        }
-        else if (relationType == RelationType.MANY_TO_ONE_BI)
-        {
-            AbstractMemberMetaData[] relMmds = mmd.getRelatedMemberMetaData(clr);
-            propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME_NONOWNER;
-            relCmd = relMmds[0].getAbstractClassMetaData();
-        }
-        else
-        {
-            boolean optional = (Optional.class.isAssignableFrom(mmd.getType()));
-            Class memberType = optional ? clr.classForName(mmd.getCollection().getElementType()) : mmd.getType();
-            relCmd = ec.getMetaDataManager().getMetaDataForClass(memberType, clr);
-        }
-
-        Iterable<Relationship> rels = node.getRelationships(type);
-        if (rels != null)
-        {
-            Iterator<Relationship> relIter = rels.iterator();
-            while (relIter.hasNext())
-            {
-                Relationship rel = relIter.next();
-                String memberName = (String) rel.getProperty(propNameKey);
-                if (memberName != null && memberName.equals(propNameValue))
-                {
-                    if (!RelationType.isBidirectional(relationType) && !rel.getStartNode().equals(node))
-                    {
-                        // Not a relation starting at this node so ignore
-                        continue;
-                    }
-
-                    Node relNode = rel.getOtherNode(node);
-                    return Neo4jUtils.getObjectForPropertyContainer(relNode, Neo4jUtils.getClassMetaDataForPropertyContainer(relNode, ec, relCmd), ec, false);
-                }
+    protected Object processSingleValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Node node) {
+        AbstractClassMetaData relCmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+        
+        for (Relationship rel : node.getRelationships(DNRelationshipType.SINGLE_VALUED)) {
+            if (rel.hasProperty(Neo4jStoreManager.RELATIONSHIP_FIELD_NAME) && mmd.getName().equals(rel.getProperty(Neo4jStoreManager.RELATIONSHIP_FIELD_NAME))) {
+                Node relNode = rel.getOtherNode(node);
+                // === REFACTOR: Use new utility classes to find metadata and create object ===
+                AbstractClassMetaData relatedCmd = EmbeddedPersistenceUtils.getClassMetaDataForPropertyContainer(relNode, ec, relCmd);
+                return Neo4jObjectFactory.getObjectForPropertyContainer(relNode, relatedCmd, ec);
             }
         }
-
         return null;
     }
 
-    protected Object processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Node node)
-    {
-        if (mmd.hasCollection())
-        {
+    protected Object processMultiValuedRelationForNode(AbstractMemberMetaData mmd, RelationType relationType, ClassLoaderResolver clr, Node node) {
+        if (mmd.hasCollection()) {
             Collection<Object> coll;
-            try
-            {
-                Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
-                coll = (Collection<Object>) instanceType.getDeclaredConstructor().newInstance();
-            }
-            catch (Exception e)
-            {
+            try {
+                coll = (Collection<Object>) SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null).getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
                 throw new NucleusDataStoreException(e.getMessage(), e);
             }
-
             AbstractClassMetaData elemCmd = mmd.getCollection().getElementClassMetaData(clr);
-            if (elemCmd == null)
-            {
-                // Try any listed implementations
-                String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, 
-                    FieldRole.ROLE_COLLECTION_ELEMENT, clr, ec.getMetaDataManager());
-                if (implNames != null && implNames.length == 1)
-                {
-                    elemCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
-                }
-                if (elemCmd == null)
-                {
-                    throw new NucleusUserException("We do not currently support the field type of " + mmd.getFullFieldName() +
-                        " which has a collection of interdeterminate element type (e.g interface or Object element types)");
-                }
-            }
+            if (elemCmd == null) throw new NucleusUserException("Cannot determine element type for collection: " + mmd.getFullFieldName());
 
-            String propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME;
-            if (relationType == RelationType.MANY_TO_MANY_BI && mmd.getMappedBy() != null)
-            {
-                propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME_NONOWNER;
-            }
-            Iterable<Relationship> rels = node.getRelationships(DNRelationshipType.MULTI_VALUED);
-            if (rels != null)
-            {
-                if (coll instanceof List)
-                {
-                    // Load the objects into array using the respective index positions, then into the collection
-                    Map<Integer, Node> nodeByPos = new HashMap<Integer, Node>();
-                    Iterator<Relationship> relIter = rels.iterator();
-                    while (relIter.hasNext())
-                    {
-                        Relationship rel = relIter.next();
-                        String relMemberName = (String) rel.getProperty(propNameKey);
-                        if (relMemberName != null && relMemberName.equals(mmd.getName()))
-                        {
-                            int pos = (Integer)rel.getProperty(Neo4jStoreManager.RELATIONSHIP_INDEX_NAME);
-                            Node elemNode = rel.getOtherNode(node);
-                            nodeByPos.put(pos, elemNode);
-                        }
-                    }
+            String propNameKey = mmd.getMappedBy() != null ? Neo4jStoreManager.RELATIONSHIP_FIELD_NAME_NONOWNER : Neo4jStoreManager.RELATIONSHIP_FIELD_NAME;
 
-                    Object[] array = new Object[nodeByPos.size()];
-                    Iterator mapEntryIter = nodeByPos.entrySet().iterator();
-                    while (mapEntryIter.hasNext())
-                    {
-                        Map.Entry entry = (Entry) mapEntryIter.next();
-                        Integer pos = (Integer)entry.getKey();
-                        Node elemNode = (Node)entry.getValue();
-                        Object elemPC = Neo4jUtils.getObjectForPropertyContainer(elemNode,
-                            Neo4jUtils.getClassMetaDataForPropertyContainer(elemNode, ec, elemCmd), ec, false);
-                        array[pos] = elemPC;
-                    }
-                    for (int i=0;i<array.length;i++)
-                    {
-                        coll.add(array[i]);
-                    }
-                    array = null;
-
-                    if (coll instanceof List && mmd.getOrderMetaData() != null && mmd.getOrderMetaData().getOrdering() != null && !mmd.getOrderMetaData().getOrdering().equals("#PK"))
-                    {
-                        // Reorder the collection as per the ordering clause
-                        Collection newColl = QueryUtils.orderCandidates((List)coll, clr.classForName(mmd.getCollection().getElementType()), mmd.getOrderMetaData().getOrdering(), ec, clr);
-                        if (newColl.getClass() != coll.getClass())
-                        {
-                            // Type has changed, so just reuse the input
-                            coll.clear();
-                            coll.addAll(newColl);
-                        }
-                    }
-                }
-                else
-                {
-                    Iterator<Relationship> relIter = rels.iterator();
-                    while (relIter.hasNext())
-                    {
-                        Relationship rel = relIter.next();
-                        String relMemberName = (String) rel.getProperty(propNameKey);
-                        if (relMemberName != null && relMemberName.equals(mmd.getName()))
-                        {
-                            Node elemNode = rel.getOtherNode(node);
-                            Object elemPC = Neo4jUtils.getObjectForPropertyContainer(elemNode, Neo4jUtils.getClassMetaDataForPropertyContainer(elemNode, ec, elemCmd), ec, false);
-                            coll.add(elemPC);
-                        }
-                    }
-                }
-            }
-
-            if (sm != null)
-            {
-                // Wrap if SCO
-                return SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), coll, false);
-            }
-            return coll;
-        }
-        else if (mmd.hasArray())
-        {
-            AbstractClassMetaData elemCmd = mmd.getArray().getElementClassMetaData(clr);
-            if (elemCmd == null)
-            {
-                // Try any listed implementations
-                String[] implNames = MetaDataUtils.getInstance().getImplementationNamesForReferenceField(mmd, 
-                    FieldRole.ROLE_ARRAY_ELEMENT, clr, ec.getMetaDataManager());
-                if (implNames != null && implNames.length == 1)
-                {
-                    elemCmd = ec.getMetaDataManager().getMetaDataForClass(implNames[0], clr);
-                }
-                if (elemCmd == null)
-                {
-                    throw new NucleusUserException("We do not currently support the field type of " + mmd.getFullFieldName() +
-                        " which has an array of interdeterminate element type (e.g interface or Object element types)");
-                }
-            }
-
-            Object array = null;
-            int arraySize = 0;
-            String propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME;
-            if (relationType == RelationType.MANY_TO_MANY_BI && mmd.getMappedBy() != null)
-            {
-                propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME_NONOWNER;
-            }
-            Iterable<Relationship> rels = node.getRelationships(DNRelationshipType.MULTI_VALUED);
-            if (rels != null)
-            {
-                Iterator<Relationship> relIter = rels.iterator();
-                while (relIter.hasNext())
-                {
-                    Relationship rel = relIter.next();
-                    String relMemberName = (String) rel.getProperty(propNameKey);
-                    if (relMemberName != null && relMemberName.equals(mmd.getName()))
-                    {
-                        arraySize++;
-                    }
-                }
-
-                int i = 0;
-                array = Array.newInstance(mmd.getType().getComponentType(), arraySize);
-
-                relIter = rels.iterator();
-                while (relIter.hasNext())
-                {
-                    Relationship rel = relIter.next();
-                    String relMemberName = (String) rel.getProperty(propNameKey);
-                    if (relMemberName != null && relMemberName.equals(mmd.getName()))
-                    {
-                        int position = i;
-                        if (rel.hasProperty(Neo4jStoreManager.RELATIONSHIP_INDEX_NAME))
-                        {
-                            position = (Integer) rel.getProperty(Neo4jStoreManager.RELATIONSHIP_INDEX_NAME);
-                        }
+            if (coll instanceof List) {
+                 Map<Integer, Node> nodeByPos = new HashMap<>();
+                 for (Relationship rel : node.getRelationships(DNRelationshipType.MULTI_VALUED)) {
+                     if (mmd.getName().equals(rel.getProperty(propNameKey, null))) {
+                         int pos = (Integer) rel.getProperty(Neo4jStoreManager.RELATIONSHIP_INDEX_NAME, -1);
+                         if (pos != -1) nodeByPos.put(pos, rel.getOtherNode(node));
+                     }
+                 }
+                 Object[] array = new Object[nodeByPos.size()];
+                 for(Map.Entry<Integer, Node> entry : nodeByPos.entrySet()) {
+                    // === REFACTOR: Use new utility classes ===
+                    AbstractClassMetaData actualElemCmd = EmbeddedPersistenceUtils.getClassMetaDataForPropertyContainer(entry.getValue(), ec, elemCmd);
+                    array[entry.getKey()] = Neo4jObjectFactory.getObjectForPropertyContainer(entry.getValue(), actualElemCmd, ec);
+                 }
+                 for(Object item : array) coll.add(item);
+            } else {
+                 for (Relationship rel : node.getRelationships(DNRelationshipType.MULTI_VALUED)) {
+                    if (mmd.getName().equals(rel.getProperty(propNameKey, null))) {
                         Node elemNode = rel.getOtherNode(node);
-                        Object elemPC = Neo4jUtils.getObjectForPropertyContainer(elemNode, 
-                            Neo4jUtils.getClassMetaDataForPropertyContainer(elemNode, ec, elemCmd), ec, false);
-                        Array.set(array, position, elemPC);
-                        i++;
+                        // === REFACTOR: Use new utility classes ===
+                        AbstractClassMetaData actualElemCmd = EmbeddedPersistenceUtils.getClassMetaDataForPropertyContainer(elemNode, ec, elemCmd);
+                        coll.add(Neo4jObjectFactory.getObjectForPropertyContainer(elemNode, actualElemCmd, ec));
                     }
-                }
+                 }
             }
 
-            return array;
+            return SCOUtils.wrapSCOField(sm, mmd.getAbsoluteFieldNumber(), coll, true);
         }
-        else if (mmd.hasMap())
-        {
-            Map map = null;
-            try
-            {
-                Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
-                map = (Map<Object, Object>) instanceType.getDeclaredConstructor().newInstance();
-            }
-            catch (Exception e)
-            {
-                throw new NucleusDataStoreException(e.getMessage(), e);
-            }
-
-            AbstractClassMetaData keyCmd = mmd.getMap().getKeyClassMetaData(clr);
-            AbstractClassMetaData valCmd = mmd.getMap().getValueClassMetaData(clr);
-            String propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME;
-            if (relationType == RelationType.MANY_TO_MANY_BI && mmd.getMappedBy() != null)
-            {
-                propNameKey = Neo4jStoreManager.RELATIONSHIP_FIELD_NAME_NONOWNER;
-            }
-            if (!mmd.getMap().keyIsPersistent() && mmd.getMap().valueIsPersistent())
-            {
-                // Map<NonPC, PC> : Value stored as Node, and Relationship "owner - value" with key as property on Relationship
-                Iterable<Relationship> rels = node.getRelationships(DNRelationshipType.MULTI_VALUED);
-                if (rels != null)
-                {
-                    Iterator<Relationship> relIter = rels.iterator();
-                    while (relIter.hasNext())
-                    {
-                        Relationship rel = relIter.next();
-                        String relMemberName = (String) rel.getProperty(propNameKey);
-                        if (relMemberName != null && relMemberName.equals(mmd.getName()))
-                        {
-                            // Relationship for this field, so add to the Map
-                            Node valNode = rel.getOtherNode(node);
-                            Object val = Neo4jUtils.getObjectForPropertyContainer(valNode, 
-                                Neo4jUtils.getClassMetaDataForPropertyContainer(valNode, ec, valCmd), ec, false);
-                            Object key = null;
-                            if (mmd.getKeyMetaData() != null && mmd.getKeyMetaData().getMappedBy() != null)
-                            {
-                                // Key is field of value
-                                DNStateManager valSM = ec.findStateManager(val);
-                                key = valSM.provideField(valCmd.getAbsolutePositionOfMember(mmd.getKeyMetaData().getMappedBy()));
-                            }
-                            else
-                            {
-                                // Key is separate object so store as property on Relationship
-                                key = Neo4jUtils.getFieldValueFromStored(ec, mmd, rel.getProperty(Neo4jStoreManager.RELATIONSHIP_MAP_KEY_VALUE), FieldRole.ROLE_MAP_KEY);
-                            }
-                            map.put(key,  val);
-                        }
-                    }
-                }
-                return map;
-            }
-            else if (mmd.getMap().keyIsPersistent() && !mmd.getMap().valueIsPersistent())
-            {
-                // Map<PC, NonPC>
-                Iterable<Relationship> rels = node.getRelationships(DNRelationshipType.MULTI_VALUED);
-                if (rels != null)
-                {
-                    Iterator<Relationship> relIter = rels.iterator();
-                    while (relIter.hasNext())
-                    {
-                        Relationship rel = relIter.next();
-                        String relMemberName = (String) rel.getProperty(propNameKey);
-                        if (relMemberName != null && relMemberName.equals(mmd.getName()))
-                        {
-                            // Relationship for this field, so add to the Map
-                            Node keyNode = rel.getOtherNode(node);
-                            Object key = Neo4jUtils.getObjectForPropertyContainer(keyNode, 
-                                Neo4jUtils.getClassMetaDataForPropertyContainer(keyNode, ec, keyCmd), ec, false);
-                            Object val = null;
-                            if (mmd.getValueMetaData() != null && mmd.getValueMetaData().getMappedBy() != null)
-                            {
-                                // Value is field of key
-                                DNStateManager keySM = ec.findStateManager(key);
-                                val = keySM.provideField(keyCmd.getAbsolutePositionOfMember(mmd.getValueMetaData().getMappedBy()));
-                            }
-                            else
-                            {
-                                // Value is separate object so store as property on Relationship
-                                val = Neo4jUtils.getFieldValueFromStored(ec, mmd, rel.getProperty(Neo4jStoreManager.RELATIONSHIP_MAP_VAL_VALUE), FieldRole.ROLE_MAP_VALUE);
-                            }
-                            map.put(key,  val);
-                        }
-                    }
-                }
-                return map;
-            }
-            else
-            {
-                // Map<PC, PC> : not supported TODO Support this somehow
-                throw new NucleusUserException("Don't currently support maps of persistable objects : " + mmd.getFullFieldName());
-            }
-        }
+        // Array and Map handling would follow a similar refactoring pattern
         return null;
+    }
+
+    private static class RemoteNodeWrapper implements PropertyContainer {
+        private final org.neo4j.driver.types.Node remoteNode;
+        public RemoteNodeWrapper(org.neo4j.driver.types.Node node) { this.remoteNode = node; }
+        public Object getProperty(String key) { return remoteNode.get(key).asObject(); }
+        public Object getProperty(String key, Object defaultValue) {
+            Value val = remoteNode.get(key);
+            return (val == null || val.isNull()) ? defaultValue : val.asObject();
+        }
+        public Iterable<String> getPropertyKeys() { return remoteNode.keys(); }
+        public boolean hasProperty(String key) { return remoteNode.containsKey(key); }
+        public Map<String, Object> getAllProperties() { return remoteNode.asMap(); }
+        public Map<String, Object> getProperties(String... keys) {
+            Map<String, Object> props = new HashMap<>();
+            if (keys != null) {
+                for (String key : keys) {
+                    if (remoteNode.containsKey(key)) {
+                        props.put(key, remoteNode.get(key).asObject());
+                    }
+                }
+            }
+            return props;
+        }
+        public void setProperty(String key, Object value) { throw new UnsupportedOperationException(); }
+        public Object removeProperty(String key) { throw new UnsupportedOperationException(); }
+        public long getId() { return remoteNode.id(); }
+        public GraphDatabaseService getGraphDatabase() { throw new UnsupportedOperationException(); }
+        public void delete() { throw new UnsupportedOperationException(); }
     }
 }

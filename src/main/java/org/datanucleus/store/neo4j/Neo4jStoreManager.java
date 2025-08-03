@@ -11,85 +11,166 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-Contributors:
-   ...
 **********************************************************************/
 package org.datanucleus.store.neo4j;
 
+import java.lang.reflect.Constructor;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.ExecutionContext;
 import org.datanucleus.PersistenceNucleusContext;
+import org.datanucleus.PropertyNames;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.flush.FlushProcess;
 import org.datanucleus.identity.SCOID;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.metadata.ClassMetaData;
-import org.datanucleus.metadata.ClassPersistenceModifier;
 import org.datanucleus.metadata.QueryLanguage;
 import org.datanucleus.store.AbstractStoreManager;
-import org.datanucleus.store.StoreData;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.store.StorePersistenceHandler;
+import org.datanucleus.store.connection.ConnectionFactory;
+import org.datanucleus.store.connection.ConnectionManagerImpl;
+import org.datanucleus.store.neo4j.query.BoltCypherQuery;
+import org.datanucleus.store.neo4j.query.BoltJDOQLQuery;
+import org.datanucleus.store.neo4j.query.CypherQuery;
 import org.datanucleus.store.neo4j.query.JDOQLQuery;
 import org.datanucleus.store.neo4j.query.JPQLQuery;
+import org.datanucleus.store.query.AbstractJavaQuery;
 import org.datanucleus.store.query.Query;
-import org.datanucleus.store.schema.table.CompleteClassTable;
+import org.datanucleus.util.ClassUtils;
 import org.datanucleus.util.Localiser;
-import org.neo4j.graphdb.GraphDatabaseService;
+import org.datanucleus.util.NucleusLogger;
 
-/**
- * StoreManager for persisting to Neo4j.
- */
-public class Neo4jStoreManager extends AbstractStoreManager
-{
-    static
-    {
+public class Neo4jStoreManager extends AbstractStoreManager {
+    static {
         Localiser.registerBundle("org.datanucleus.store.neo4j.Localisation", Neo4jStoreManager.class.getClassLoader());
     }
 
-    /** Key used for storing the PropertyContainer in an StateManager associatedValues. */
     public static String OBJECT_PROVIDER_PROPCONTAINER = "DN_OP_PROPCONTAINER";
-
     public static String PROPCONTAINER_TYPE_INDEX = "DN_TYPES";
     public static String PROPCONTAINER_TYPE_INDEX_KEY = "class";
-
     public static String RELATIONSHIP_FIELD_NAME = "DN_FIELD_NAME";
     public static String RELATIONSHIP_FIELD_NAME_NONOWNER = "DN_FIELD_NAME_NONOWNER";
     public static String RELATIONSHIP_INDEX_NAME = "DN_CONTAINER_INDEX";
-
-    /** Property name added to relationship to store the key of a map when we have Map&lt;NonPC, PC&gt; and the relationship is owner-value. */
     public static String RELATIONSHIP_MAP_KEY_VALUE = "DN_MAP_KEY";
-    /** Property name added to relationship to store the value of a map when we have Map&lt;PC, NonPC&gt; and the relationship is owner-key. */
     public static String RELATIONSHIP_MAP_VAL_VALUE = "DN_MAP_VAL";
-
-    /** key used in metadata for whether a class is persisted as an attributed relation (Relationship) */
     public static String METADATA_ATTRIBUTED_RELATION = "attributed-relation";
 
-    /**
-     * Constructor for a Neo4j StoreManager.
-     * @param clr ClassLoader resolver
-     * @param nucleusContext Nucleus Context
-     * @param props Properties managed by this store
-     */
-    public Neo4jStoreManager(ClassLoaderResolver clr, PersistenceNucleusContext nucleusContext, Map<String, Object> props)
-    {
+    private boolean isRemoteConnection = false;
+
+    public Neo4jStoreManager(ClassLoaderResolver clr, PersistenceNucleusContext nucleusContext, Map<String, Object> props) {
         super("neo4j", clr, nucleusContext, props);
+        String connectionUrl = getStringProperty(PropertyNames.PROPERTY_CONNECTION_URL);
 
-        // Handler for persistence process
-        persistenceHandler = new Neo4jPersistenceHandler(this);
-
+        if (connectionUrl != null && connectionUrl.toLowerCase().contains("bolt")) {
+            this.isRemoteConnection = true;
+            persistenceHandler = new BoltPersistenceHandler(this);
+        } else {
+            this.isRemoteConnection = false;
+            try {
+                // === THE FIX IS HERE: Use reflection to lazy-load the embedded handler ===
+                // This prevents NoClassDefFoundError if the embedded driver JAR is not on the classpath.
+                Class<?> handlerClass = clr.classForName("org.datanucleus.store.neo4j.embedded.Neo4jPersistenceHandler");
+                Constructor<?> handlerConstructor = ClassUtils.getConstructorWithArguments(handlerClass, new Class[] { StoreManager.class });
+                persistenceHandler = (StorePersistenceHandler) handlerConstructor.newInstance(this);
+            } catch (Exception e) {
+                NucleusLogger.DATASTORE.error("Failed to initialize Neo4jPersistenceHandler for embedded mode.", e);
+                throw new NucleusException("Failed to initialize embedded Neo4jPersistenceHandler. Is the datanucleus-neo4j-embedded.jar on the classpath?", e);
+            }
+        }
         logConfiguration();
     }
 
-    public Collection getSupportedOptions()
-    {
-        Set set = new HashSet();
+    public boolean isRemoteConnection() {
+        return isRemoteConnection;
+    }
+
+    @Override
+    protected void registerConnectionMgr() {
+        this.connectionMgr = new SmartConnectionManager(this);
+    }
+
+    private class SmartConnectionManager extends ConnectionManagerImpl {
+        public SmartConnectionManager(StoreManager storeMgr) { super(storeMgr); }
+        public ConnectionFactory newConnectionFactory(StoreManager storeMgr, String resourceName) {
+            try {
+                ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
+                String factoryClassName = isRemoteConnection ?
+                    "org.datanucleus.store.neo4j.BoltConnectionFactoryImpl" :
+                    "org.datanucleus.store.neo4j.ConnectionFactoryImpl";
+                Class<?> factoryClass = clr.classForName(factoryClassName);
+                Constructor<?> ctr = ClassUtils.getConstructorWithArguments(factoryClass, new Class[]{StoreManager.class, String.class});
+                return (ConnectionFactory) ctr.newInstance(storeMgr, resourceName);
+            } catch (Exception e) {
+                throw new NucleusException("Error creating ConnectionFactory", e);
+            }
+        }
+    }
+
+    @Override
+    public Collection<String> getSupportedQueryLanguages() {
+        Collection<String> languages = super.getSupportedQueryLanguages();
+        languages.add("Cypher");
+        return languages;
+    }
+
+    @Override
+    public boolean supportsQueryLanguage(String language) {
+        if (language.equalsIgnoreCase("Cypher")) {
+            return true;
+        }
+        return super.supportsQueryLanguage(language);
+    }
+    
+    @Override
+    public Query newQuery(String language, ExecutionContext ec) {
+        if (language.equalsIgnoreCase("CYPHER")) {
+            if (isRemoteConnection) { return new BoltCypherQuery(this, ec, (String) null); }
+            return new CypherQuery(this, ec);
+        }
+        if (isRemoteConnection) { return new BoltJDOQLQuery(this, ec); }
+        else {
+            if (language.equals(QueryLanguage.JDOQL.name())) return new JDOQLQuery(this, ec);
+            if (language.equals(QueryLanguage.JPQL.name())) return new JPQLQuery(this, ec);
+        }
+        throw new NucleusException("Error creating query for language " + language);
+    }
+
+    @Override
+    public Query newQuery(String language, ExecutionContext ec, String queryString) {
+        if (language.equalsIgnoreCase("CYPHER")) {
+            if (isRemoteConnection) { return new BoltCypherQuery(this, ec, queryString); }
+            return new CypherQuery(this, ec, queryString);
+        }
+        if (isRemoteConnection) { return new BoltJDOQLQuery(this, ec, queryString); }
+        else {
+            if (language.equals(QueryLanguage.JDOQL.name())) return new JDOQLQuery(this, ec, queryString);
+            if (language.equals(QueryLanguage.JPQL.name())) return new JPQLQuery(this, ec, queryString);
+        }
+        throw new NucleusException("Error creating query for language " + language);
+    }
+
+    @Override
+    public Query newQuery(String language, ExecutionContext ec, Query q) {
+        if (language.equalsIgnoreCase("CYPHER")) {
+            String queryString = (q instanceof AbstractJavaQuery) ? ((AbstractJavaQuery)q).getSingleStringQuery() : null;
+            if (isRemoteConnection) { return new BoltCypherQuery(this, ec, queryString); }
+            return new CypherQuery(this, ec, queryString);
+        }
+        if (isRemoteConnection) { return new BoltJDOQLQuery(this, ec, q); }
+        else {
+            if (language.equals(QueryLanguage.JDOQL.name())) return new JDOQLQuery(this, ec, (JDOQLQuery) q);
+            if (language.equals(QueryLanguage.JPQL.name())) return new JPQLQuery(this, ec, (JPQLQuery) q);
+        }
+        throw new NucleusException("Error creating query for language " + language);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public Collection getSupportedOptions() {
+        Set<String> set = new HashSet<>();
         set.add(StoreManager.OPTION_APPLICATION_ID);
         set.add(StoreManager.OPTION_APPLICATION_COMPOSITE_ID);
         set.add(StoreManager.OPTION_DATASTORE_ID);
@@ -102,164 +183,17 @@ public class Neo4jStoreManager extends AbstractStoreManager
         return set;
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StoreManager#newQuery(java.lang.String, org.datanucleus.ExecutionContext)
-     */
     @Override
-    public Query newQuery(String language, ExecutionContext ec)
-    {
-        if (language.equals(QueryLanguage.JDOQL.name()))
-        {
-            return new JDOQLQuery(this, ec);
-        }
-        else if (language.equals(QueryLanguage.JPQL.name()))
-        {
-            return new JPQLQuery(this, ec);
-        }
-        throw new NucleusException("Error creating query for language " + language);
+    public String getClassNameForObjectID(Object id, ClassLoaderResolver clr, ExecutionContext ec) {
+        if (id == null) return null;
+        if (id instanceof SCOID) return ((SCOID) id).getSCOClass();
+        return super.getClassNameForObjectID(id, clr, ec);
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StoreManager#newQuery(java.lang.String, org.datanucleus.ExecutionContext, java.lang.String)
-     */
-    @Override
-    public Query newQuery(String language, ExecutionContext ec, String queryString)
-    {
-        if (language.equals(QueryLanguage.JDOQL.name()))
-        {
-            return new JDOQLQuery(this, ec, queryString);
-        }
-        else if (language.equals(QueryLanguage.JPQL.name()))
-        {
-            return new JPQLQuery(this, ec, queryString);
-        }
-        throw new NucleusException("Error creating query for language " + language);
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.StoreManager#newQuery(java.lang.String, org.datanucleus.ExecutionContext, org.datanucleus.store.query.Query)
-     */
-    @Override
-    public Query newQuery(String language, ExecutionContext ec, Query q)
-    {
-        if (language.equals(QueryLanguage.JDOQL.name()))
-        {
-            return new JDOQLQuery(this, ec, (JDOQLQuery) q);
-        }
-        else if (language.equals(QueryLanguage.JPQL.name()))
-        {
-            return new JPQLQuery(this, ec, (JPQLQuery) q);
-        }
-        throw new NucleusException("Error creating query for language " + language);
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractStoreManager#getClassNameForObjectID(java.lang.Object, org.datanucleus.ClassLoaderResolver, org.datanucleus.store.ExecutionContext)
-     */
-    @Override
-    public String getClassNameForObjectID(Object id, ClassLoaderResolver clr, ExecutionContext ec)
-    {
-        if (id == null)
-        {
-            // User stupidity
-            return null;
-        }
-        else if (id instanceof SCOID)
-        {
-            // Object is a SCOID
-            return ((SCOID) id).getSCOClass();
-        }
-
-        String rootClassName = super.getClassNameForObjectID(id, clr, ec);
-        // TODO Allow for use of users-own PK class in multiple inheritance trees
-        String[] subclasses = getMetaDataManager().getSubclassesForClass(rootClassName, true);
-        if (subclasses == null || subclasses.length == 0)
-        {
-            // No subclasses so no need to go to the datastore
-            return rootClassName;
-        }
-
-        AbstractClassMetaData rootCmd = getMetaDataManager().getMetaDataForClass(rootClassName, clr);
-        return Neo4jUtils.getClassNameForIdentity(id, rootCmd, ec, clr);
-    }
-
-    /**
-     * Accessor for whether this value strategy is supported.
-     * Overrides the superclass to allow for "IDENTITY" since we support it and no entry in plugins for it.
-     * @param strategy The strategy
-     * @return Whether it is supported.
-     */
-    public boolean supportsValueGenerationStrategy(String strategy)
-    {
-        if (super.supportsValueGenerationStrategy(strategy))
-        {
-            return true;
-        }
-
-        // "identity" doesn't have an explicit entry in plugin since uses datastore capabilities
-        if (strategy.equalsIgnoreCase("IDENTITY"))
-        {
-            return true;
-        }
+    
+    public boolean supportsValueGenerationStrategy(String strategy) {
+        if (super.supportsValueGenerationStrategy(strategy)) return true;
+        if (strategy.equalsIgnoreCase("IDENTITY")) return true;
         return false;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.AbstractStoreManager#manageClasses(org.datanucleus.ClassLoaderResolver, java.lang.String[])
-     */
-    @Override
-    public void manageClasses(ClassLoaderResolver clr, String... classNames)
-    {
-        if (classNames == null)
-        {
-            return;
-        }
-
-        ManagedConnection mconn = connectionMgr.getConnection(-1);
-        try
-        {
-            GraphDatabaseService db = (GraphDatabaseService)mconn.getConnection();
-
-            manageClasses(classNames, clr, db);
-        }
-        finally
-        {
-            mconn.release();
-        }
-    }
-
-    public void manageClasses(String[] classNames, ClassLoaderResolver clr, GraphDatabaseService db)
-    {
-        if (classNames == null)
-        {
-            return;
-        }
-
-        // Filter out any "simple" type classes
-        String[] filteredClassNames = getNucleusContext().getTypeManager().filterOutSupportedSecondClassNames(classNames);
-
-        // Find the ClassMetaData for these classes and all referenced by these classes
-//        Set<String> clsNameSet = new HashSet<String>();
-        Iterator iter = getMetaDataManager().getReferencedClasses(filteredClassNames, clr).iterator();
-        while (iter.hasNext())
-        {
-            ClassMetaData cmd = (ClassMetaData)iter.next();
-            if (cmd.getPersistenceModifier() == ClassPersistenceModifier.PERSISTENCE_CAPABLE && !cmd.isAbstract() && !cmd.isEmbeddedOnly())
-            {
-                if (!storeDataMgr.managesClass(cmd.getFullClassName()))
-                {
-                    StoreData sd = storeDataMgr.get(cmd.getFullClassName());
-                    if (sd == null)
-                    {
-                        CompleteClassTable table = new CompleteClassTable(this, cmd, null);
-                        sd = newStoreData(cmd, clr);
-                        sd.setTable(table);
-                        registerStoreData(sd);
-                    }
-
-//                    clsNameSet.add(cmd.getFullClassName());
-                }
-            }
-        }
     }
 }

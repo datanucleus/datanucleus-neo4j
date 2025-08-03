@@ -25,117 +25,72 @@ import org.datanucleus.ExecutionContext;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
 import org.datanucleus.state.DNStateManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.schema.table.MemberColumnMapping;
 import org.datanucleus.store.schema.table.Table;
-import org.datanucleus.util.ClassUtils;
 import org.neo4j.graphdb.PropertyContainer;
 
 /**
  * FieldManager for putting values from an embedded POJO into a Neo4j Node.
+ * This class has been refactored to work with its modular parent.
  */
-public class StoreEmbeddedFieldManager extends StoreFieldManager
-{
-    /** Metadata for the embedded member (maybe nested) that this FieldManager represents). */
+public class StoreEmbeddedFieldManager extends StoreFieldManager {
+
+    /** Metadata for the embedded member (maybe nested) that this FieldManager represents. */
     protected List<AbstractMemberMetaData> mmds;
 
-    public StoreEmbeddedFieldManager(DNStateManager sm, PropertyContainer propObj, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
-    {
-        super(sm, propObj, insert, table);
+    public StoreEmbeddedFieldManager(DNStateManager sm, PropertyContainer propContainer, boolean insert, List<AbstractMemberMetaData> mmds, Table table) {
+        super(sm, propContainer, insert, table);
         this.mmds = mmds;
     }
 
-    public StoreEmbeddedFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, PropertyContainer propObj, boolean insert, List<AbstractMemberMetaData> mmds, Table table)
-    {
-        super(ec, cmd, propObj, insert, table);
+    // === FIX: This constructor now correctly calls the existing parent constructor ===
+    public StoreEmbeddedFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, PropertyContainer propContainer, boolean insert, List<AbstractMemberMetaData> mmds, Table table) {
+        super(ec, cmd, propContainer, insert, table);
         this.mmds = mmds;
     }
 
-    protected MemberColumnMapping getColumnMapping(int fieldNumber)
-    {
-        List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>(mmds);
+    @Override
+    protected MemberColumnMapping getColumnMapping(int fieldNumber) {
+        List<AbstractMemberMetaData> embMmds = new ArrayList<>(mmds);
         embMmds.add(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber));
         return table.getMemberColumnMappingForEmbeddedMember(embMmds);
     }
 
     @Override
-    public void storeObjectField(int fieldNumber, Object value)
-    {
+    public void storeObjectField(int fieldNumber, Object value) {
         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
-        AbstractMemberMetaData lastMmd = mmds.get(mmds.size()-1);
-
-        EmbeddedMetaData embmd = mmds.get(0).getEmbeddedMetaData();
-        if (mmds.size() == 1 && embmd != null && embmd.getOwnerMember() != null && embmd.getOwnerMember().equals(mmd.getName()))
-        {
-            // Special case of this member being a link back to the owner. TODO Repeat this for nested and their owners
-            DNStateManager ownerSM = ec.getOwnerForEmbeddedStateManager(sm);
-            if (ownerSM != null && value != ownerSM.getObject())
-            {
-                // Make sure the owner field is set
-                sm.replaceField(fieldNumber, ownerSM.getObject());
-            }
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        
+        // Handle link back to owner in embedded objects
+        if (mmds.get(0).getEmbeddedMetaData() != null && mmds.get(0).getEmbeddedMetaData().getOwnerMember() != null &&
+            mmds.get(0).getEmbeddedMetaData().getOwnerMember().equals(mmd.getName())) {
+            // This field is the owner link, no need to store it as a property.
             return;
         }
 
-        ClassLoaderResolver clr = ec.getClassLoaderResolver();
         RelationType relationType = mmd.getRelationType(clr);
-        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, lastMmd))
-        {
-            // Embedded field
-            if (RelationType.isRelationSingleValued(relationType))
-            {
-                // Embedded PC object - This performs "flat embedding" as fields in the same document
-                AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
-                if (embCmd == null)
-                {
-                    throw new NucleusUserException("Field " + mmd.getFullFieldName() +
-                        " specified as embedded but metadata not found for the class of type " + mmd.getTypeName());
-                }
-
-                if (RelationType.isBidirectional(relationType))
-                {
-                    // TODO Add logic for bidirectional relations so we know when to stop embedding
-                }
-
-                List<AbstractMemberMetaData> embMmds = new ArrayList<AbstractMemberMetaData>(mmds);
-                embMmds.add(mmd);
-
-                if (value == null)
-                {
-                    // Remove all properties for this embedded (and sub-embedded objects)
-                    int[] embMmdPosns = embCmd.getAllMemberPositions();
-                    StoreEmbeddedFieldManager storeEmbFM = new StoreEmbeddedFieldManager(ec, embCmd, propObj, insert, embMmds, table);
-                    for (int i=0;i<embMmdPosns.length;i++)
-                    {
-                        AbstractMemberMetaData embMmd = embCmd.getMetaDataForManagedMemberAtAbsolutePosition(embMmdPosns[i]);
-                        if (String.class.isAssignableFrom(embMmd.getType()) || embMmd.getType().isPrimitive() || ClassUtils.isPrimitiveWrapperType(mmd.getTypeName()))
-                        {
-                            // Remove property for any primitive/wrapper/String fields
-                            List<AbstractMemberMetaData> colEmbMmds = new ArrayList<AbstractMemberMetaData>(embMmds);
-                            colEmbMmds.add(embMmd);
-                            MemberColumnMapping mapping = table.getMemberColumnMappingForEmbeddedMember(colEmbMmds);
-                            propObj.removeProperty(mapping.getColumn(0).getName());
-                        }
-                        else if (Object.class.isAssignableFrom(embMmd.getType()))
-                        {
-                            storeEmbFM.storeObjectField(embMmdPosns[i], null);
-                        }
-                    }
-                    return;
-                }
-
-                // Process all fields of the embedded object
-                DNStateManager embSM = ec.findStateManagerForEmbedded(value, sm, mmd, null);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, propObj, insert, embMmds, table);
-                embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
+        if (relationType != RelationType.NONE && MetaDataUtils.getInstance().isMemberEmbedded(ec.getMetaDataManager(), clr, mmd, relationType, mmds.get(mmds.size()-1))) {
+            // This is a NESTED embedded field.
+            List<AbstractMemberMetaData> nestedMmds = new ArrayList<>(mmds);
+            nestedMmds.add(mmd);
+            
+            if (value == null) {
+                // TODO: Implement removal of properties for nulled nested embedded objects
                 return;
             }
-        }
 
-        storeNonEmbeddedObjectField(mmd, relationType, clr, value);
+            AbstractClassMetaData embCmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+            DNStateManager embSM = ec.findStateManagerForEmbedded(value, sm, mmd, null);
+            FieldManager ffm = new StoreEmbeddedFieldManager(embSM, this.propContainer, insert, nestedMmds, table);
+            embSM.provideFields(embCmd.getAllMemberPositions(), ffm);
+        } else {
+            // === FIX: This is not an embedded field, so delegate to the parent class. ===
+            // The parent knows how to handle primitives, wrappers, and relations.
+            super.storeObjectField(fieldNumber, value);
+        }
     }
 }

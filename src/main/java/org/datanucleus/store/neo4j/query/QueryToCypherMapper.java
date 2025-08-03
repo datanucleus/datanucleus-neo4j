@@ -33,7 +33,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.RelationType;
-import org.datanucleus.store.neo4j.Neo4jUtils;
+import org.datanucleus.store.neo4j.Neo4jSchemaUtils;
 import org.datanucleus.store.neo4j.query.expression.Neo4jAggregateExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jBooleanExpression;
 import org.datanucleus.store.neo4j.query.expression.Neo4jExpression;
@@ -140,7 +140,7 @@ public class QueryToCypherMapper extends AbstractExpressionEvaluator
         }
 
         // Generate the Cypher text (as far as is possible)
-        String cypherText = Neo4jUtils.getCypherTextForQuery(ec, candidateCmd, compilation.getCandidateAlias(), 
+        String cypherText = Neo4jSchemaUtils.getCypherTextForQuery(ec, candidateCmd, compilation.getCandidateAlias(), 
             query.isSubclasses(), filterText, (resultComplete ? resultText : null), orderText, rangeFrom, rangeTo);
         neo4jCompilation.setCypherText(cypherText);
     }
